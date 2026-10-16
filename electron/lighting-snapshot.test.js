@@ -1,0 +1,30 @@
+'use strict';
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const os=require('node:os');
+const path=require('node:path');
+const {HeAdapter}=require('./he-adapter');
+const {compareLightingSnapshots}=require('./lighting-snapshot-diff');
+test('snapshot comparison detects edits, truncation and rejects incompatible or malformed input',()=>{
+ const before={schema:1,device:{vendorId:0x2233,productId:0x006b},sections:[6,9,17].map(kind=>({kind,bytes:3,hex:'000102'}))};
+ const after=structuredClone(before);after.sections[1].hex='000903';after.sections[2]={kind:17,bytes:2,hex:'0001'};
+ const diff=compareLightingSnapshots(before,after);
+ assert.equal(diff.sections[0].changed,false);
+ assert.deepEqual(diff.sections[1].changes,[{offset:1,before:1,after:9},{offset:2,before:2,after:3}]);
+ assert.deepEqual(diff.sections[2].changes,[{offset:2,before:2,after:null}]);
+ after.device.productId=0;assert.throws(()=>compareLightingSnapshots(before,after),/M6 Lite/);
+ after.device.productId=0x006b;after.sections[0].hex='gg0102';assert.throws(()=>compareLightingSnapshots(before,after),/Invalid section/);
+});
+test('lighting snapshot preserves every returned byte and issues only section reads',t=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'m6-lighting-'));
+ t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+ const adapter=new HeAdapter(dir),calls=[];
+ const raw=new Map([[6,Buffer.alloc(228,6)],[9,Buffer.alloc(108,9)],[17,Buffer.alloc(24,17)]]);
+ adapter.transaction=action=>action({readInit(kind){calls.push(kind);return raw.get(kind);},send(){assert.fail('Snapshot must not write settings');}});
+ const result=adapter.readLightingSnapshot();
+ assert.deepEqual(calls,[6,9,17]);
+ assert.equal(result.decoded,false);
+ for(const section of result.sections)assert.deepEqual(fs.readFileSync(section.file),raw.get(section.kind));
+ assert.deepEqual(JSON.parse(fs.readFileSync(path.join(result.backup,'snapshot.json'))).sections,result.sections);
+});

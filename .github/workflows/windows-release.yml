@@ -1,0 +1,64 @@
+name: Windows release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: electron/package-lock.json
+
+      - name: Install dependencies
+        working-directory: electron
+        run: npm ci
+
+      - name: Run tests
+        working-directory: electron
+        run: npm test
+
+      - name: Build portable application
+        working-directory: electron
+        run: npm run build:win
+
+      - name: Install NSIS
+        shell: pwsh
+        run: choco install nsis --yes --no-progress
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $version = node -p "require('./electron/package.json').version"
+          & "$env:ProgramFiles(x86)\NSIS\makensis.exe" "/DAPP_VERSION=$version" "installer\M6-Lite-Control.nsi"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: m6-lite-control-windows
+          path: |
+            dist/M6-Lite-Control-*-Setup.exe
+            dist/M6-Lite-Control-*-win32-x64
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem dist -Filter '*-Setup.exe' | Select-Object -First 1
+          gh release create $env:GITHUB_REF_NAME $installer.FullName --title "M6 Lite Control $env:GITHUB_REF_NAME" --generate-notes

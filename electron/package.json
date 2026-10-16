@@ -1,0 +1,19 @@
+{
+  "name": "m6-lite-control",
+  "version": "0.10.59",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "node build-win.cjs",
+    "test": "node --test check-package.test.js"
+  },
+  "devDependencies": {"electron": "^33.0.0", "esbuild": "^0.27.0", "tailwindcss": "^3.4.17", "rcedit": "^5.0.2"},
+  "dependencies": {
+    "@heroui/react": "^2.8.10",
+    "framer-motion": "^14.3.0",
+    "node-hid": "^3.4.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  }
+}
