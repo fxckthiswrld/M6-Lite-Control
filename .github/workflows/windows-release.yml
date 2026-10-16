@@ -43,7 +43,7 @@ jobs:
         shell: pwsh
         run: |
           $version = node -p "require('./electron/package.json').version"
-          & "$env:ProgramFiles(x86)\NSIS\makensis.exe" "/DAPP_VERSION=$version" "installer\M6-Lite-Control.nsi"
+          & "${env:ProgramFiles(x86)}\NSIS\makensis.exe" "/DAPP_VERSION=$version" "installer\M6-Lite-Control.nsi"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload build artifacts

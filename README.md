@@ -41,8 +41,8 @@ $version = node -p "require('./package.json').version"
 The workflow in `.github/workflows/windows-release.yml` runs tests, builds the portable application, creates an NSIS installer and publishes a GitHub release when a `v*` tag is pushed.
 
 ```powershell
-git tag v0.10.59
-git push origin v0.10.59
+git tag v0.10.60
+git push origin v0.10.60
 ```
 
 The repository is intended to remain private because it contains device protocol and reverse-engineering implementation details.
