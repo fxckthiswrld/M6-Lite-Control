@@ -55,6 +55,26 @@ test('manual calibration validates and backs up before sending a command',t=>{
  assert.throws(()=>adapter.calibrationCommand(1),/420/);
  assert.throws(()=>adapter.calibrationCommand(4),/Unsupported/);
 });
+test('calibration reset sends 08 30 04 and verifies all records at baseline',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'m6-calibration-reset-'));
+ try{
+  const before=Buffer.alloc(420);for(let i=0;i<70;i++){before[i*6]=i%2;before.writeUInt16LE(1700+i,i*6+2);before.writeUInt16LE(2600+i,i*6+4);}
+  const after=Buffer.from(before);for(let i=0;i<70;i++){after.writeUInt16LE(2000,i*6+2);after.writeUInt16LE(2200,i*6+4);}
+  const adapter=new HeAdapter(dir),sent=[];let writes=0;
+  adapter.transaction=fn=>fn({readInit:()=>Buffer.from(writes?after:before),send:packet=>{writes++;sent.push(Buffer.from(packet));}});
+  const result=adapter.resetCalibration();
+  assert.equal(result.verified,true);assert.equal(result.resetCount,70);assert.deepEqual([...sent[0].subarray(0,3)],[8,48,4]);
+  assert.deepEqual(fs.readFileSync(result.backup),before);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('calibration reset rejects incomplete readback and keeps the backup',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'m6-calibration-reset-fail-'));
+ try{
+  const before=Buffer.alloc(420),after=Buffer.from(before);after.writeUInt16LE(1999,2);
+  const adapter=new HeAdapter(dir),writes=[];adapter.transaction=fn=>fn({readInit:()=>Buffer.from(writes.length?after:before),send:p=>writes.push(p)});
+  assert.throws(()=>adapter.resetCalibration(),/readback mismatch/);assert.equal(writes.length,1);assert.equal(fs.readdirSync(dir).filter(name=>name.endsWith('.bin')).length,2);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
 
 test('comparison detects visible, hidden, model and reserved changes independently',()=>{
  const layout=require('./keyboard-layout.json');

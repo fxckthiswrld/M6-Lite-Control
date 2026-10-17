@@ -115,6 +115,7 @@ contextBridge.exposeInMainWorld('keyboard', {
   readCalibration: () => ipcRenderer.invoke('keyboard:read-calibration'),
   calibrationState: () => ipcRenderer.invoke('keyboard:calibration-state'),
   calibrationCommand: command => ipcRenderer.invoke('keyboard:calibration-command', command),
+  resetCalibration: () => ipcRenderer.invoke('keyboard:reset-calibration'),
   calibrateSelected: id => ipcRenderer.invoke('keyboard:calibrate-selected', id),
   readProfile: layer => ipcRenderer.invoke('keyboard:read-profile', layer),
   exportHe: layer => ipcRenderer.invoke('keyboard:export-he', layer),

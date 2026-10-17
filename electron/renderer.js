@@ -334,7 +334,7 @@ for(const name of ['media','layer'])$(name+'-standard').onclick=async()=>{
  catch(e){$(name+'-status').textContent=e.message;}finally{setBusy(false);}
 };
 const calibrationPanel=document.createElement('section');calibrationPanel.className='panel';calibrationPanel.hidden=true;
-calibrationPanel.innerHTML='<small>HALL EFFECT</small><h2>Calibration</h2><p>Read the saved sensor ranges for every switch. Reading creates a local backup and preserves the current calibration.</p><button id="calibration-read">Refresh calibration</button><button id="calibration-start">Calibrate all</button><button id="calibration-selected">Calibrate selected key</button><button id="calibration-finish" hidden>Finish</button><button id="calibration-cancel" class="secondary" hidden>Cancel</button><p id="calibration-status" role="status" aria-live="polite">Not read yet.</p><div id="calibration-map" class="keyboard" aria-label="Saved switch calibration"></div><p>OK = a saved working sensor range. Not calibrated = factory/reset baseline 2000 / 2200. Error = an unexpected range. Empty = both values are zero.</p><p><strong>Selected-key flow:</strong> press only the selected switch, choose Finish, then confirm the vendor save prompt. The keyboard may reconnect.</p>';
+calibrationPanel.innerHTML='<small>HALL EFFECT</small><h2>Calibration</h2><p>Read the saved sensor ranges for every switch. Reading creates a local backup and preserves the current calibration.</p><button id="calibration-read">Refresh calibration</button><button id="calibration-reset" class="secondary">Reset all calibration</button><button id="calibration-start">Calibrate all</button><button id="calibration-selected">Calibrate selected key</button><button id="calibration-finish" hidden>Finish</button><button id="calibration-cancel" class="secondary" hidden>Cancel</button><p id="calibration-status" role="status" aria-live="polite">Not read yet.</p><div id="calibration-map" class="keyboard" aria-label="Saved switch calibration"></div><p>OK = a saved working sensor range. Not calibrated = factory/reset baseline 2000 / 2200. Error = an unexpected range. Empty = both values are zero.</p><p><strong>Reset all calibration</strong> restores every saved sensor range to 2000 / 2200. A backup is created before the reset. This operation cannot be undone automatically.</p><p><strong>Selected-key flow:</strong> press only the selected switch, choose Finish, then confirm the vendor save prompt. The keyboard may reconnect.</p>';
 pendingPanel.after(calibrationPanel);
 const calibrationReadStatus=document.createElement('p');calibrationReadStatus.id='calibration-read-status';calibrationReadStatus.textContent='No successful read yet.';$('calibration-map').before(calibrationReadStatus);
 let calibrationActive=false,calibrationStateKnown=false,calibrationPoll=null;
@@ -355,6 +355,7 @@ function updateSelectedCalibrationButton(){
   $('calibration-selected').disabled=busy||!calibrationStateKnown||calibrationActive||!selectedId;
   $('calibration-selected').title=selectedId?`Calibrate ${profile?.layout.find(k=>k.id===selectedId)?.label||selectedId}`:'Select a switch first';
   $('calibration-start').disabled=busy||!calibrationStateKnown||calibrationActive;
+  $('calibration-reset').disabled=busy||!calibrationStateKnown||calibrationActive;
   $('calibration-finish').disabled=busy||!calibrationStateKnown||!calibrationActive;
   $('calibration-cancel').disabled=busy||!calibrationStateKnown||!calibrationActive;
 }
@@ -410,6 +411,19 @@ async function calibrationCommand(command){
   finally{setBusy(false);}
 }
 $('calibration-start').onclick=()=>calibrationCommand(1);
+$('calibration-reset').onclick=async()=>{
+  if(busy||!calibrationStateKnown||calibrationActive)return;
+  const prompt='Reset calibration values for all keys?\n\nAll saved sensor ranges will be replaced with the 2000 / 2200 baseline. A backup will be kept, but automatic undo is unavailable.';
+  if(!window.confirm(prompt))return;
+  setBusy(true);$('calibration-status').textContent='Resetting all calibration values...';
+  try{
+    const reply=await window.keyboard.resetCalibration();
+    if(!reply.ok)throw new Error(reply.error);
+    await refreshCalibration();
+    $('calibration-status').textContent=`Calibration reset verified for ${reply.result.resetCount} records. Backup: ${reply.result.backup}`;
+  }catch(error){$('calibration-status').textContent=error.message;}
+  finally{setBusy(false);updateSelectedCalibrationButton();}
+};
 $('calibration-selected').onclick=async()=>{
   if(busy||!calibrationStateKnown||calibrationActive||!selectedId)return;
   setBusy(true);$('calibration-status').textContent=`Starting selected-key calibration for ${profile?.layout.find(k=>k.id===selectedId)?.label||selectedId}...`;

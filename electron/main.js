@@ -56,6 +56,7 @@ ipcMain.handle('keyboard:set-backlight-direction', async (_event,value) => usbOr
 ipcMain.handle('keyboard:read-calibration', async () => usbOrError(() => heAdapter.readCalibration(), null));
 ipcMain.handle('keyboard:calibration-state', async () => usbOrError(() => heAdapter.calibrationState(), null));
 ipcMain.handle('keyboard:calibration-command', async (_event, command) => usbOrError(() => heAdapter.calibrationCommand(command), null));
+ipcMain.handle('keyboard:reset-calibration', async () => usbOrError(() => heAdapter.resetCalibration(), null, {exclusive:true}));
 ipcMain.handle('keyboard:calibrate-selected', async (_event, id) => usbOrError(() => heAdapter.calibrateSelected(id), null));
 ipcMain.handle('keyboard:read-profile', async (_event, layer) => usbOrError(() => heAdapter.readProfile(layer), null));
 ipcMain.handle('keyboard:export-he', async (event,layer)=>usbOrError(async()=>{

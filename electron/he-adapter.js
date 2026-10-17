@@ -118,6 +118,28 @@ class HeAdapter {
       return {command,backup,started:command===1,finished:command===2,canceled:command===3};
     });
   }
+  resetCalibration() {
+    return this.transaction(device=>{
+      fs.mkdirSync(this.backupDir,{recursive:true});
+      const before=device.readInit(24);
+      require('./calibration').parseCalibration(before);
+      const backup=path.join(this.backupDir,`calibration-reset-${require('node:crypto').randomUUID()}.bin`);
+      fs.writeFileSync(backup,before,{flag:'wx'});
+      const payload=Buffer.alloc(20);payload.set([8,48,4]);
+      device.send(payload);
+      let after;
+      try { after=device.readInit(24); }
+      catch(error){throw new Error(`Calibration reset command was sent, but readback failed: ${error.message}. Backup: ${backup}`);}
+      const records=require('./calibration').parseCalibration(after);
+      const invalid=records.filter(record=>record.min!==2000||record.max!==2200);
+      if(invalid.length){
+        const actual=backup.replace(/\.bin$/,'.actual.bin');
+        fs.writeFileSync(actual,after,{flag:'wx'});
+        throw new Error(`Calibration reset readback mismatch: ${invalid.length} records are not at 2000 / 2200. Backup: ${backup}. Actual: ${actual}`);
+      }
+      return {command:4,verified:true,backup,records,layout,resetCount:records.length};
+    });
+  }
   calibrateSelected(id) {
     if(!layout.some(key=>key.id===id)) throw new Error('Select one physical switch');
     if(this.calibrationSession?.phase==='active')throw new Error('Calibration is already active');
