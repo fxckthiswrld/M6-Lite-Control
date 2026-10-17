@@ -11,7 +11,7 @@ The application provides an English Wootility-style interface for Hall Effect se
 - Calibration readback, full-key calibration and selected-key calibration flow.
 - Remap with a full-size keyboard target layout and icon/short-label picker.
 - Media, FN/layer, HotKey, DKS and Snap Tap/SOCD programming.
-- Back Light, Under Light and Single Light controls.
+- Back Light and Under Light controls; Single Light RGB and brightness for individual keys or groups.
 - EQ lighting mode with tray operation.
 - BeastMode, EyeMode, DevMode and FPS Enhance controls.
 - Keyboard tester and device memory save command.
