@@ -50,3 +50,17 @@ function decodeCalibrationPayload(payload, physicalKeys) {
     header:Buffer.from(payload.subarray(0,5))};
 }
 module.exports.decodeCalibrationPayload=decodeCalibrationPayload;
+
+// Merge only entries received during the current calibration session. Missing
+// keys are deliberately left out: their stored INIT24 values must not be
+// mistaken for a measurement from this session.
+function mergeCalibrationEntries(target, entries) {
+  if (!(target instanceof Map)) throw new TypeError('Expected a calibration entry map');
+  if (!Array.isArray(entries)) throw new TypeError('Expected calibration entries');
+  for (const entry of entries) {
+    if (!entry || typeof entry.id !== 'string' || !Number.isInteger(entry.min) || !Number.isInteger(entry.max)) continue;
+    target.set(entry.id, { ...entry, rangeStatus: entry.max - entry.min > 500 ? 'ok' : 'not-calibrated' });
+  }
+  return target;
+}
+module.exports.mergeCalibrationEntries=mergeCalibrationEntries;

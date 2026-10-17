@@ -400,7 +400,7 @@ async function calibrationCommand(command){
     if(!reply.ok)throw new Error(reply.error);
     setCalibrationActive(command===1);
     if(command===1){
-      $('calibration-status').textContent='Calibration started. Reading stored ranges every second; live values before Finish are not verified. Press switches in any order, then choose Finish.';if(typeof startCalibrationPoll==='function')startCalibrationPoll();
+      $('calibration-status').textContent='Calibration started. Reading saved ranges and listening for live calibration telemetry. Press switches in any order, then choose Finish.';if(typeof startCalibrationPoll==='function')startCalibrationPoll();
     }else{
       if(typeof stopCalibrationPoll==='function')stopCalibrationPoll();
       await new Promise(r=>setTimeout(r,1500));
@@ -427,7 +427,7 @@ $('calibration-reset').onclick=async()=>{
 $('calibration-selected').onclick=async()=>{
   if(busy||!calibrationStateKnown||calibrationActive||!selectedId)return;
   setBusy(true);$('calibration-status').textContent=`Starting selected-key calibration for ${profile?.layout.find(k=>k.id===selectedId)?.label||selectedId}...`;
-  try{const reply=await window.keyboard.calibrateSelected(selectedId);if(!reply.ok)throw new Error(reply.error);setCalibrationActive(true);$('calibration-status').textContent=`Selected-key calibration started for ${profile?.layout.find(k=>k.id===selectedId)?.label||selectedId}. Press only this key, then choose Finish.`;startCalibrationPoll();}
+  try{const reply=await window.keyboard.calibrateSelected(selectedId);if(!reply.ok)throw new Error(reply.error);setCalibrationActive(true);$('calibration-status').textContent=`Selected-key calibration started for ${profile?.layout.find(k=>k.id===selectedId)?.label||selectedId}. Live telemetry will mark received values; press only this key, then choose Finish.`;startCalibrationPoll();}
   catch(error){$('calibration-status').textContent=error.message;}finally{setBusy(false);updateSelectedCalibrationButton();}
 };
 $('calibration-finish').onclick=()=>{
@@ -443,17 +443,27 @@ async function refreshCalibration(silent=false,generation){
     const fragment=document.createDocumentFragment();
     for(const physical of data.layout){
       const record=data.records[physical.row*14+physical.col];
-      const key=document.createElement('div');key.className='calibration-key';key.dataset.id=physical.id;key.dataset.state=record.rangeStatus;
+      const liveRecord=data.live?.active?data.live.records?.[physical.id]:null;
+      const pending=data.live?.active&&!liveRecord;
+      const displayRecord=liveRecord||record;
+      const displayState=pending?'pending':displayRecord.rangeStatus;
+      const key=document.createElement('div');key.className='calibration-key';key.dataset.id=physical.id;key.dataset.state=displayState;
       key.style.left=`${3+physical.x/680*94}%`;key.style.top=`${18+physical.y*1.65}px`;key.style.width=`${physical.width/680*94}%`;
-      for(const value of [physical.label||'Space',record.rangeStatus==='ok'?'OK':record.rangeStatus,`${record.min} / ${record.max}`]){const label=document.createElement('span');label.textContent=value;key.appendChild(label);}
-      key.title=`${physical.label}: sensor min ${record.min}, max ${record.max}, model ${record.model}`;
+      const stateLabel=liveRecord?(liveRecord.rangeStatus==='ok'?'OK · live':liveRecord.rangeStatus):pending?'Pending':record.rangeStatus==='ok'?'OK':record.rangeStatus;
+      const values=liveRecord?`${liveRecord.min} / ${liveRecord.max}`:`${record.min} / ${record.max}${pending?' · stored':''}`;
+      for(const value of [physical.label||'Space',stateLabel,values]){const label=document.createElement('span');label.textContent=value;key.appendChild(label);}
+      key.title=liveRecord?`${physical.label}: live sensor min ${liveRecord.min}, max ${liveRecord.max}`:`${physical.label}: stored sensor min ${record.min}, max ${record.max}${pending?' (no live measurement received yet)':''}`;
       fragment.appendChild(key);
     }
     $('calibration-map').replaceChildren(fragment);
-    const ranges=new Map(data.layout.map(physical=>{const record=data.records[physical.row*14+physical.col];return [physical.id,`${record.min}/${record.max}`];}));
+    const ranges=new Map(data.layout.map(physical=>{
+      const stored=data.records[physical.row*14+physical.col],live=data.live?.active?data.live.records?.[physical.id]:null,record=live||stored;
+      return [physical.id,`${record.min}/${record.max}`];
+    }));
     const changed=calibrationPreviousRanges?[...ranges].filter(([id,value])=>calibrationPreviousRanges.get(id)!==value).length:null;
     calibrationPreviousRanges=ranges;calibrationReadCount++;
-    $('calibration-read-status').textContent=`Updated: ${data.readAt}. Successful reads: ${calibrationReadCount}. ${changed===null?'First reading.':`Ranges changed since previous read: ${changed}/${data.layout.length}.`} Updated confirms a successful read, not a new calibration measurement.`;
+    const liveStatus=data.live?.active?(data.live.available?` Live calibration telemetry: ${data.live.count}/${data.layout.length} switches. Values marked “live”; remaining values are stored.`:' Live telemetry not observed yet; values shown are stored and remaining switches are Pending.') : '';
+    $('calibration-read-status').textContent=`Updated: ${data.readAt}. Successful reads: ${calibrationReadCount}. ${changed===null?'First reading.':`Ranges changed since previous read: ${changed}/${data.layout.length}.`}${liveStatus}${data.live?.active?'':' Updated confirms a successful read, not a new calibration measurement.'}`;
     const summary=Object.entries(data.statusSummary||{}).map(([name,count])=>`${name}: ${count}`).join(' ? ');
     if(!silent)$('calibration-status').textContent=`Read ${data.layout.length} switches${summary?` ? ${summary}`:''}. Backup: ${data.backup}`;
     if(data.comparison){

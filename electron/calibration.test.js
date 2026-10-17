@@ -20,6 +20,21 @@ test('reading calibration only requests INIT24 and backs up every byte',()=>{
   assert.throws(()=>adapter.readCalibration(),/420/);assert.equal(fs.readdirSync(dir).length,1);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('active calibration exposes validated unsolicited live entries separately from INIT24',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'m6-live-calibration-'));
+ try {
+  const raw=Buffer.alloc(420),payload=Buffer.alloc(20,255);payload.set([8,48,0,0,0]);
+  payload[5]=29;payload.writeUInt16LE(1600,6);payload.writeUInt16LE(2601,8);
+  const adapter=new HeAdapter(dir),sent=[];
+  adapter.transaction=fn=>fn({readInit:(kind,onPayload)=>{assert.equal(kind,24);onPayload?.(payload);return raw;},send:p=>sent.push(p)});
+  adapter.calibrationCommand(1);
+  const result=adapter.readCalibration();
+  assert.equal(result.liveProgressAvailable,true);
+  assert.equal(result.live.count,1);
+  assert.deepEqual(result.live.records['2:1'],{index:29,id:'2:1',row:2,col:1,min:1600,max:2601,rangeReady:true,rangeStatus:'ok'});
+ } finally { fs.rmSync(dir,{recursive:true,force:true}); }
+});
 test('model-table encoder preserves all four blocks (not a calibration command)',()=>{
  const models=Buffer.alloc(64);models[29]=0x37;
  const packets=encodeSingleModel(models);

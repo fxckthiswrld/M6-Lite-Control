@@ -5,6 +5,7 @@ const path = require('node:path');
 const { HeDevice } = require('./he-device');
 const { fields, COLS } = require('./he-protocol');
 const layout = require('./keyboard-layout.json');
+const { decodeCalibrationPayload, mergeCalibrationEntries } = require('./calibration-telemetry');
 const {parseProgrammingProfile,encodePair,encodeModRestore,encodeFullModRestore,encodeStandardRemap,encodeModify,encodeLayer,encodeLayerRestore,encodeProgrammingReset,encodeHotKey,encodeMedia,encodeDks,encodeDksRestore,countMacroSteps,PROFILE_SIZE,DKS_MOUSE_ACTIONS,buildDksRecord}=require('./key-programming');
 
 function millimetresToRaw(value) {
@@ -20,6 +21,8 @@ function displayKey(key) {
 class HeAdapter {
   constructor(backupDir) {
     this.backupDir=backupDir;
+    this.calibrationLive=new Map();
+    this.calibrationLiveUpdatedAt=null;
     const journal=path.join(backupDir,'calibration-session.json');
     try{
       if(fs.existsSync(journal)){
@@ -70,7 +73,14 @@ class HeAdapter {
   }
   readCalibration() {
     return this.transaction(device=>{
-      const raw=device.readInit(24);
+      const liveActive=this.calibrationSession?.phase==='active';
+      const onPayload=liveActive ? payload=>{
+        try {
+          const decoded=decodeCalibrationPayload(payload, require('./calibration-key-order.json'));
+          if(decoded?.entries?.length){mergeCalibrationEntries(this.calibrationLive,decoded.entries);this.calibrationLiveUpdatedAt=new Date().toISOString();}
+        } catch { /* unrelated or incomplete unsolicited frames are ignored */ }
+      } : undefined;
+      const raw=device.readInit(24,onPayload);
       const records=require('./calibration').parseCalibration(raw);
       fs.mkdirSync(this.backupDir,{recursive:true});
       const backup=path.join(this.backupDir,`calibration-${require('node:crypto').randomUUID()}.bin`);
@@ -96,7 +106,12 @@ class HeAdapter {
         comparison.report=report;
       }
       const visible=require('./calibration').visibleCalibrationRecords(records,layout);
-      return {records,visible,layout,backup,comparison,readAt:new Date().toISOString(),liveProgressAvailable:false,statusSummary:visible.reduce((summary,key)=>(summary[key.rangeStatus]=(summary[key.rangeStatus]||0)+1,summary),{})};
+      const liveEntries=liveActive?[...this.calibrationLive.values()]:[];
+      const liveRecords=Object.fromEntries(liveEntries.map(entry=>[entry.id,{...entry}]));
+      return {records,visible,layout,backup,comparison,readAt:new Date().toISOString(),
+        liveProgressAvailable:liveActive&&liveEntries.length>0,
+        live: {active:liveActive,available:liveActive&&liveEntries.length>0,count:liveEntries.length,updatedAt:liveActive?this.calibrationLiveUpdatedAt:null,records:liveRecords},
+        statusSummary:visible.reduce((summary,key)=>(summary[key.rangeStatus]=(summary[key.rangeStatus]||0)+1,summary),{})};
     });
   }
   calibrationCommand(command,selectedId) {
@@ -108,6 +123,7 @@ class HeAdapter {
       require('./calibration').parseCalibration(before);
       const backup=path.join(this.backupDir,`calibration-command-${require('node:crypto').randomUUID()}.bin`);
       fs.writeFileSync(backup,before,{flag:'wx'});
+      if(command===1){this.calibrationLive.clear();this.calibrationLiveUpdatedAt=null;}
       const session=command===1?{backup,...(selectedId?{selectedId}:{})}:this.calibrationSession||{backup};
       this.persistCalibrationSession({...session,phase:'pending'});
       const payload=Buffer.alloc(20); payload.set([8,48,command]); device.send(payload);

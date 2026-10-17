@@ -1,10 +1,18 @@
 # Calibration readout investigation — 2026-10-17
 
-The current adapter reads INIT24 (420 bytes) and returns `readAt` with
-`liveProgressAvailable: false`. The renderer polls this path during an active
-application calibration session. The separate decoder in
-`electron/calibration-telemetry.js` is not connected to a device receive loop.
-Neither polling nor its timestamp establishes live sensor measurements.
+The adapter reads INIT24 (420 bytes) for the saved ranges and, during an active
+calibration session, also inspects every decoded 20-byte payload that arrives
+on the same HID read. Payloads are accepted only when byte 1 is `0x30` and
+their three five-byte entries pass the physical-key/index checks. Accepted
+entries are accumulated by physical key and returned separately as `live`;
+they never overwrite the saved INIT24 records.
+
+The receive format is still a static reconstruction: no captured hardware
+frame has yet matched the candidate `0x30` payload. When no such frame arrives,
+the renderer marks every key `Pending` and labels the shown numbers as stored.
+It displays `OK · live` only for a validated live entry whose range is greater
+than 500 counts. This keeps the UI useful without presenting INIT24 polling as
+intermediate calibration.
 
 The renderer now displays the successful read timestamp, successful-read count,
 and number of physical min/max ranges changed since the previous successful
@@ -41,9 +49,9 @@ Coordinated physical check, same day:
   `device-backups` directory, SHA-256
   `7f6092cc3a428baea8bc13e015fe562d319dc601a1584636a058bc929dfb5f1a`.
 
-Conclusion: INIT24 polling did not expose intermediate ranges in this physical
-trial. Updated works but is not calibration progress. No Finish was performed;
-this trial does not measure when committed values change or rule out a separate
-live channel. Next, capture intermediate device input reports, validate the
-candidate telemetry format, and connect that stream to the UI. A synthetic
-decoder test alone is insufficient evidence to call this implemented.
+Conclusion: INIT24 polling did not expose intermediate ranges in the physical
+trial. The candidate receive path is now connected behind strict validation and
+the UI can display live values when matching frames are present. The existing
+physical evidence still does not confirm that this device emits the candidate
+frames, so a controlled capture remains required before claiming hardware
+telemetry is working.

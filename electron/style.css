@@ -17,7 +17,7 @@ main{padding:26px 32px}.keyboard{margin:24px 0}.panel{padding:20px}.controls{mar
 
 .selection-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:20px}.selection-bar p{flex-basis:100%;margin:0;color:#aaa;font-size:12px}.selection-bar button[aria-pressed="true"]{background:#d0bcff;color:#211833}#selection-summary{color:#d0bcff}
 
-.calibration-key{position:absolute;height:62px;display:flex;flex-direction:column;justify-content:space-around;align-items:center;border:1px solid #777;border-radius:6px;background:#22212a;font-size:10px}.calibration-key[data-state="ok"]{border-color:#64d68a}.calibration-key[data-state="not-calibrated"]{border-color:#777}.calibration-key[data-state="error"]{border-color:#f56b6b}.calibration-key[data-state="empty"]{border-style:dashed}#calibration-status{overflow-wrap:anywhere}
+.calibration-key{position:absolute;height:62px;display:flex;flex-direction:column;justify-content:space-around;align-items:center;border:1px solid #777;border-radius:6px;background:#22212a;font-size:10px}.calibration-key[data-state="ok"]{border-color:#64d68a}.calibration-key[data-state="not-calibrated"]{border-color:#777}.calibration-key[data-state="pending"]{border-color:#d6aa64;border-style:dashed}.calibration-key[data-state="error"]{border-color:#f56b6b}.calibration-key[data-state="empty"]{border-style:dashed}#calibration-status{overflow-wrap:anywhere}
 dialog { max-width: 560px; color: #e8edf5; background: #111722; border: 1px solid #394557; border-radius: 14px; padding: 24px; }
 dialog::backdrop { background: rgb(0 0 0 / 70%); }
 #key-tester { width: min(760px, 90vw); max-width: 760px; }

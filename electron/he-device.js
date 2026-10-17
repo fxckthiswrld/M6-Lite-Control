@@ -9,7 +9,7 @@ class HeDevice {
     const written = this.handle.write([...encodeOutputReport(payload)]);
     if (written !== 21) throw new Error(`Incomplete HID write: ${written}/21`);
   }
-  readInit(kind) {
+  readInit(kind, onPayload) {
     const request = Buffer.alloc(20); request.set([8,0,kind]);
     const transfer = new InitTransfer(kind);
     this.send(request);
@@ -17,7 +17,11 @@ class HeDevice {
     while (Date.now()<deadline) {
       const report = Buffer.from(this.handle.readTimeout(100));
       if (!report.length) continue;
-      if (transfer.accept(decodeInputReport(report))) return transfer.finish();
+      const payload = decodeInputReport(report);
+      // Unsolicited reports share the same HID stream as INIT fragments. Let
+      // callers inspect them before the INIT assembler filters them out.
+      try { onPayload?.(payload); } catch { /* telemetry must never break a read */ }
+      if (transfer.accept(payload)) return transfer.finish();
     }
     throw new Error(`Device read timed out (${transfer.parts.size}/${transfer.total ?? '?'} packets)`);
   }

@@ -47,3 +47,20 @@ test('calibration dispatch accepts only decoded calibration payloads',()=>{
  assert.throws(()=>decodeCalibrationPayload(Buffer.alloc(56),order),/20-byte/);
  assert.throws(()=>decodeCalibrationPayload(Buffer.alloc(21),order),/20-byte/);
 });
+
+test('live entries merge by physical key and derive the vendor readiness status',()=>{
+ const {mergeCalibrationEntries}=require('./calibration-telemetry');
+ const entries=new Map();
+ mergeCalibrationEntries(entries,[{id:'2:1',min:1700,max:2200,index:29},{id:'2:3',min:1700,max:2201,index:31}]);
+ assert.equal(entries.get('2:1').rangeStatus,'not-calibrated');
+ assert.equal(entries.get('2:3').rangeStatus,'ok');
+ mergeCalibrationEntries(entries,[{id:'2:1',min:1600,max:2600,index:29}]);
+ assert.deepEqual(entries.get('2:1'),{id:'2:1',min:1600,max:2600,index:29,rangeStatus:'ok'});
+});
+
+test('live merge ignores malformed entries without losing prior measurements',()=>{
+ const {mergeCalibrationEntries}=require('./calibration-telemetry');
+ const entries=new Map([['A',{id:'A',min:1,max:2}]]);
+ mergeCalibrationEntries(entries,[null,{id:'A',min:'bad',max:2},{id:'B',min:1,max:'bad'}]);
+ assert.deepEqual([...entries.keys()],['A']);
+});
