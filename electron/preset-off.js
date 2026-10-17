@@ -43,6 +43,16 @@ function prepareQuickPreset(raw,layer,preset){
     else buildDksRecord(key.record.subarray(52,64),{row:partner.row+1,col:partner.col},20).copy(expected,offset+52);
   }
   plan.command[2]=preset==='snap'?11:9;
+  // SNAP_TAB_Set in the original panel writes each side of the pair with a
+  // source coordinate in the packet. A single command-11 packet has no
+  // selected source and does not update A/D on the device.
+  if(preset==='snap'){
+    plan.commands=[29,31].map(index=>{
+      const key=profile.keys[index],partner=profile.keys[partners.get(index)];
+      return encodePair(key,layer,profile.allSteps,5,{row:partner.row+1,col:partner.col},11);
+    });
+    plan.command=plan.commands[0];
+  }
   return {...plan,expected,changed:!expected.equals(raw)};
 }
 module.exports={preparePresetOff,prepareQuickPreset};

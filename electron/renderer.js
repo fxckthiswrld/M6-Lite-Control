@@ -687,12 +687,26 @@ async function applyDks(enabled){
     programming=reply.result;showPairState();showDksState();$('dks-status').textContent='DKS assignment verified.';
   }catch(error){$('dks-status').textContent=error.message;}finally{setBusy(false);}
 }
+function quickPresetReadback(keys,preset){
+ const byId=new Map(keys.map(key=>[`${key.row}:${key.col}`,key]));
+ const ids=[['1:2','W','2:2','S'],['2:2','S','1:2','W'],['2:1','A','2:3','D'],['2:3','D','2:1','A']];
+ const entries=ids.map(([id,label,targetId])=>{const key=byId.get(id),target=byId.get(targetId);return {id,label,key,target};});
+ if(entries.some(entry=>!entry.key||!entry.target))throw new Error(`M${layer+1} readback is missing a WASD key`);
+ if(preset==='dks'){
+  const invalid=entries.filter(entry=>entry.key.mode!==4||entry.key.dks.type!==0||entry.key.dks.row!==entry.target.row+1||entry.key.dks.col!==entry.target.col||entry.key.dks.interval!==20);
+  if(invalid.length)throw new Error(`M${layer+1} WASD DKS readback mismatch: ${invalid.map(entry=>entry.label).join(', ')}`);
+  return `M${layer+1}: W→S, S→W, A→D, D→A. All four DKS records read back at interval 20.`;
+ }
+ const invalid=entries.filter(entry=>entry.key.mode!==0);
+ if(invalid.length)throw new Error(`M${layer+1} WASD disable readback mismatch: ${invalid.map(entry=>entry.label).join(', ')}`);
+ return `M${layer+1}: WASD DKS disabled. All four source keys are Standard.`;
+}
 async function applyWasd(enabled){
   if(busy||!programming)return;
   setBusy(true);$('preset-status').textContent='Applying WASD and verifying all assignments...';
   try{
     const reply=enabled?await window.keyboard.quickPreset({layer,preset:'dks'}):await window.keyboard.setDksWasd({layer,enabled});if(!reply.ok)throw new Error(reply.error);
-    programming=reply.result;showPairState();showDksState();$('preset-status').textContent=enabled?'DKS enabled on W, A, S and D.':'WASD DKS disabled.';
+    programming=reply.result;showPairState();showDksState();$('preset-status').textContent=quickPresetReadback(programming.keys,enabled?'dks':'off');
   }catch(error){$('preset-status').textContent=error.message;}finally{setBusy(false);}
 }
 async function applySnapPreset(enabled){

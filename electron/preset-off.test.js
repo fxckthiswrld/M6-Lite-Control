@@ -7,6 +7,11 @@ for(const [before,preset,after,command] of [['standard','dks','dks',9],['dks','s
   test(`native preset ${before} -> ${preset} matches recorded hardware transfer`,()=>{
     const plan=prepareQuickPreset(native(before),1,preset);
     assert.deepEqual(plan.expected,native(after));assert.equal(plan.command[2],command);
+    if(preset==='snap'){
+      assert.equal(plan.commands.length,2);
+      assert.deepEqual([...plan.commands[0].subarray(6,12)],[2,1,5,0,3,3]);
+      assert.deepEqual([...plan.commands[1].subarray(6,12)],[2,3,5,0,3,1]);
+    }
   });
 }
 test('SNAP preserves W/S DKS while DKS resets A/D Snap partner fields',()=>{
@@ -15,6 +20,16 @@ test('SNAP preserves W/S DKS while DKS resets A/D Snap partner fields',()=>{
   for(const i of [29,31])assert.equal(snap[8+i*68],5);
   const dks=prepareQuickPreset(snap,1,'dks').expected;
   for(const i of [16,29,30,31]){assert.equal(dks[8+i*68],4);assert.equal(dks[8+i*68+65],i%14);}
+});
+test('quick SNAP sends the two source-specific native packets',()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'m6-quick-snap-'));
+  try{
+    const raw=native('dks'),plan=prepareQuickPreset(raw,1,'snap'),adapter=new HeAdapter(dir),sent=[];
+    adapter.transaction=fn=>fn({withLayer:(_kind,layer,f)=>{assert.equal(layer,1);return f();},
+      readInit:()=>Buffer.from(sent.length?plan.expected:raw),send:packet=>sent.push(Buffer.from(packet))});
+    assert.equal(adapter.setQuickPreset({layer:1,preset:'snap'}).verified,true);
+    assert.deepEqual(sent,plan.commands);
+  }finally{fs.rmSync(dir,{recursive:true});}
 });
 test('quick preset rejects unknown operation before opening USB',()=>{
   const adapter=new HeAdapter('unused');adapter.transaction=()=>assert.fail('Unexpected USB access');

@@ -431,7 +431,8 @@ class HeAdapter {
       fs.mkdirSync(this.backupDir,{recursive:true});
       const backup=path.join(this.backupDir,`preset-${preset}-${require('node:crypto').randomUUID()}.bin`);fs.writeFileSync(backup,raw,{flag:'wx'});
       try{
-        device.send(plan.command);const after=read();
+        for(const command of (plan.commands||[plan.command]))device.send(command);
+        const after=read();
         if(!after.equals(plan.expected)){fs.writeFileSync(backup+'.actual',after);throw new Error('Quick preset readback mismatch');}
         return {verified:true,layer,changed:true,backup,keys:parseProgrammingProfile(after).keys.map(({record,...key})=>key)};
       }catch(error){
