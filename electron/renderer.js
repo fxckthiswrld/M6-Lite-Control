@@ -462,7 +462,8 @@ async function refreshCalibration(silent=false,generation){
     }));
     const changed=calibrationPreviousRanges?[...ranges].filter(([id,value])=>calibrationPreviousRanges.get(id)!==value).length:null;
     calibrationPreviousRanges=ranges;calibrationReadCount++;
-    const liveStatus=data.live?.active?(data.live.available?` Live calibration telemetry: ${data.live.count}/${data.layout.length} switches. Values marked “live”; remaining values are stored.`:' Live telemetry not observed yet; values shown are stored and remaining switches are Pending.') : '';
+    const telemetryDetail=data.live?.active?` Frames: ${data.live.frames??0}${data.live.rejected?`, rejected: ${data.live.rejected}`:''}${data.live.error?`, error: ${data.live.error}`:''}.`:'';
+    const liveStatus=data.live?.active?(data.live.available?` Live calibration telemetry: ${data.live.count}/${data.layout.length} switches. Values marked “live”; remaining values are stored.${telemetryDetail}`:` Live telemetry not observed yet; values shown are stored and remaining switches are Pending.${telemetryDetail}`) : '';
     $('calibration-read-status').textContent=`Updated: ${data.readAt}. Successful reads: ${calibrationReadCount}. ${changed===null?'First reading.':`Ranges changed since previous read: ${changed}/${data.layout.length}.`}${liveStatus}${data.live?.active?'':' Updated confirms a successful read, not a new calibration measurement.'}`;
     const summary=Object.entries(data.statusSummary||{}).map(([name,count])=>`${name}: ${count}`).join(' ? ');
     if(!silent)$('calibration-status').textContent=`Read ${data.layout.length} switches${summary?` ? ${summary}`:''}. Backup: ${data.backup}`;

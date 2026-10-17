@@ -1,11 +1,12 @@
 # Calibration readout investigation — 2026-10-17
 
 The adapter reads INIT24 (420 bytes) for the saved ranges and, during an active
-calibration session, also inspects every decoded 20-byte payload that arrives
-on the same HID read. Payloads are accepted only when byte 1 is `0x30` and
-their three five-byte entries pass the physical-key/index checks. Accepted
-entries are accumulated by physical key and returned separately as `live`;
-they never overwrite the saved INIT24 records.
+calibration session, listens on a dedicated HID input stream as well as the
+normal read path. Payloads are accepted only when byte 1 is `0x30` and their
+three five-byte entries pass the physical-key/index checks. Accepted entries
+are accumulated by physical key and returned separately as `live`; they never
+overwrite the saved INIT24 records. The UI exposes input-frame and rejected
+frame counters to distinguish an absent telemetry stream from a decoder miss.
 
 The receive format is still a static reconstruction: no captured hardware
 frame has yet matched the candidate `0x30` payload. When no such frame arrives,

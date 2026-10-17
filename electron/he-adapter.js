@@ -6,6 +6,7 @@ const { HeDevice } = require('./he-device');
 const { fields, COLS } = require('./he-protocol');
 const layout = require('./keyboard-layout.json');
 const { decodeCalibrationPayload, mergeCalibrationEntries } = require('./calibration-telemetry');
+const { decodeInputReport } = require('./hid-frame');
 const {parseProgrammingProfile,encodePair,encodeModRestore,encodeFullModRestore,encodeStandardRemap,encodeModify,encodeLayer,encodeLayerRestore,encodeProgrammingReset,encodeHotKey,encodeMedia,encodeDks,encodeDksRestore,countMacroSteps,PROFILE_SIZE,DKS_MOUSE_ACTIONS,buildDksRecord}=require('./key-programming');
 
 function millimetresToRaw(value) {
@@ -23,6 +24,9 @@ class HeAdapter {
     this.backupDir=backupDir;
     this.calibrationLive=new Map();
     this.calibrationLiveUpdatedAt=null;
+    this.calibrationTelemetryHandle=null;
+    this.calibrationTelemetryFrames=0;
+    this.calibrationTelemetryRejected=0;
     const journal=path.join(backupDir,'calibration-session.json');
     try{
       if(fs.existsSync(journal)){
@@ -64,6 +68,28 @@ class HeAdapter {
       ...(session?.recovered?{recovered:true}:{}),
       ...(this.calibrationRecoveryError?{recoveryError:this.calibrationRecoveryError}:{}),
       ...(session?.selectedId?{selectedId:session.selectedId}:{})};
+  }
+  startCalibrationTelemetry() {
+    if(this.calibrationTelemetryHandle)return;
+    const info=HID.devices().find(d=>Number(d.vendorId)===0x2233&&Number(d.productId)===0x006b&&Number(d.interface)===2&&Number(d.usagePage)===12);
+    if(!info){this.calibrationTelemetryError='M6 Lite+ configuration interface MI02 not detected';return;}
+    try{
+      const handle=new HID.HID(info.path);
+      handle.on('data',report=>{
+        this.calibrationTelemetryFrames++;
+        try{
+          const payload=decodeInputReport(Buffer.from(report));
+          const decoded=decodeCalibrationPayload(payload,require('./calibration-key-order.json'));
+          if(decoded?.entries?.length){mergeCalibrationEntries(this.calibrationLive,decoded.entries);this.calibrationLiveUpdatedAt=new Date().toISOString();}
+        }catch{this.calibrationTelemetryRejected++;}
+      });
+      handle.on('error',error=>{this.calibrationTelemetryError=error.message;});
+      this.calibrationTelemetryHandle=handle;this.calibrationTelemetryError=null;
+    }catch(error){this.calibrationTelemetryError=error.message;}
+  }
+  stopCalibrationTelemetry() {
+    const handle=this.calibrationTelemetryHandle;this.calibrationTelemetryHandle=null;
+    if(handle){try{handle.removeAllListeners();handle.close();}catch{}}
   }
   transaction(action) {
     const info=HID.devices().find(d=>Number(d.vendorId)===0x2233 && Number(d.productId)===0x006b && Number(d.interface)===2 && Number(d.usagePage)===12);
@@ -110,20 +136,21 @@ class HeAdapter {
       const liveRecords=Object.fromEntries(liveEntries.map(entry=>[entry.id,{...entry}]));
       return {records,visible,layout,backup,comparison,readAt:new Date().toISOString(),
         liveProgressAvailable:liveActive&&liveEntries.length>0,
-        live: {active:liveActive,available:liveActive&&liveEntries.length>0,count:liveEntries.length,updatedAt:liveActive?this.calibrationLiveUpdatedAt:null,records:liveRecords},
+        live: {active:liveActive,available:liveActive&&liveEntries.length>0,count:liveEntries.length,updatedAt:liveActive?this.calibrationLiveUpdatedAt:null,frames:liveActive?this.calibrationTelemetryFrames:0,rejected:liveActive?this.calibrationTelemetryRejected:0,error:liveActive?this.calibrationTelemetryError:null,records:liveRecords},
         statusSummary:visible.reduce((summary,key)=>(summary[key.rangeStatus]=(summary[key.rangeStatus]||0)+1,summary),{})};
     });
   }
   calibrationCommand(command,selectedId) {
     if (![1, 2, 3].includes(command)) throw new RangeError('Unsupported calibration command');
     if(command===1&&this.calibrationSession?.phase==='active')throw new Error('Calibration is already active');
-    return this.transaction(device => {
+    if(command!==1)this.stopCalibrationTelemetry();
+    const result=this.transaction(device => {
       fs.mkdirSync(this.backupDir,{recursive:true});
       const before=device.readInit(24);
       require('./calibration').parseCalibration(before);
       const backup=path.join(this.backupDir,`calibration-command-${require('node:crypto').randomUUID()}.bin`);
       fs.writeFileSync(backup,before,{flag:'wx'});
-      if(command===1){this.calibrationLive.clear();this.calibrationLiveUpdatedAt=null;}
+      if(command===1){this.calibrationLive.clear();this.calibrationLiveUpdatedAt=null;this.calibrationTelemetryFrames=0;this.calibrationTelemetryRejected=0;this.calibrationTelemetryError=null;}
       const session=command===1?{backup,...(selectedId?{selectedId}:{})}:this.calibrationSession||{backup};
       this.persistCalibrationSession({...session,phase:'pending'});
       const payload=Buffer.alloc(20); payload.set([8,48,command]); device.send(payload);
@@ -133,6 +160,8 @@ class HeAdapter {
       this.calibrationRecoveryError=null;
       return {command,backup,started:command===1,finished:command===2,canceled:command===3};
     });
+    if(command===1)this.startCalibrationTelemetry();
+    return result;
   }
   resetCalibration() {
     return this.transaction(device=>{
