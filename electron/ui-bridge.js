@@ -114,7 +114,7 @@ for(const [name,nodes] of Object.entries(lightingGroups)){const wrapper=document
 let uiPage='home';
 function navigateUI(page){
  if(busy)return false;
- discardLightingDraft();showSelected();
+ discardLightingDraft();showDeviceSettings();showSelected();
  fillRemap();fillLayer();fillMedia();fillModify();fillHotKey();showPairState();showDksState();
  for(const panel of [hePanel,advancedPanel,remapPanel,pendingPanel,calibrationPanel,lightingPanel,settingsPanel])panel.hidden=true;
  uiPage=page;document.body.dataset.page=page;

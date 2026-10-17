@@ -14,6 +14,8 @@ The application provides an English Wootility-style interface for Hall Effect se
 - Back Light and Under Light controls; Single Light RGB and brightness for individual keys or groups.
 - EQ lighting mode with tray operation.
 - BeastMode, EyeMode, DevMode and FPS Enhance controls.
+- Highlight, firmware Auto calibration, Auto light off (1–30 minutes) and Saturation R/G/B (64–255), each with an independent Apply action.
+- Calibration read timestamps, range-change counts and polling errors. Live values before Finish are not yet available; see [the hardware check](protocol/CALIBRATION_READOUT.md).
 - Keyboard tester and device memory save command.
 
 ## Build locally

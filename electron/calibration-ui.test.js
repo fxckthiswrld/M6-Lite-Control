@@ -71,3 +71,41 @@ test('renderer reload restores active session and failure blocks commands until 
  await c.restoreCalibrationState();await c.calibrationCommand(3);
  assert.deepEqual(h.sent,[3]);assert.equal(c.calibrationActive,false);
 });
+
+function pollingHarness(){
+ const elements=new Map();let tick;
+ const element=()=>({textContent:'',dataset:{},style:{},appendChild(){},replaceChildren(){}});
+ const context=vm.createContext({busy:false,Map,
+  $:id=>{if(!elements.has(id))elements.set(id,element());return elements.get(id);},
+  document:{createElement:element,createDocumentFragment:element},
+  setInterval:fn=>{tick=fn;return 1;},clearInterval(){},window:{keyboard:{}}
+ });
+ vm.runInContext(source.slice(source.indexOf('let calibrationActive='),source.indexOf('function setCalibrationActive(')),context);
+ vm.runInContext(source.slice(source.indexOf('async function refreshCalibration('),source.indexOf("$('calibration-read').onclick=")),context);
+ vm.runInContext('calibrationActive=true;startCalibrationPoll();',context);
+ return {context,tick:()=>tick()};
+}
+
+test('successful polling distinguishes fresh reads from changed sensor ranges',async()=>{
+ const h=pollingHarness(),c=h.context;
+ const data={layout:[{id:'0:0',row:0,col:0,label:'Esc',x:0,y:0,width:40}],records:[{min:1800,max:2600,model:0,rangeStatus:'ok'}],readAt:'2026-10-17T10:00:00.000Z'};
+ c.window.keyboard.readCalibration=async()=>({ok:true,result:data});
+ await h.tick();assert.match(c.$('calibration-read-status').textContent,/Successful reads: 1.*First reading/);
+ data.readAt='2026-10-17T10:00:01.000Z';
+ await h.tick();assert.match(c.$('calibration-read-status').textContent,/10:00:01.*Successful reads: 2.*previous read: 0\/1/);
+ data.records[0].max=2700;
+ await h.tick();assert.match(c.$('calibration-read-status').textContent,/Successful reads: 3.*previous read: 1\/1/);
+ c.window.keyboard.readCalibration=async()=>({ok:false,error:'Timed out'});
+ await h.tick();assert.match(c.$('calibration-read-status').textContent,/Read failed: Timed out/);
+ c.window.keyboard.readCalibration=async()=>({ok:true,result:data});
+ await h.tick();assert.match(c.$('calibration-read-status').textContent,/Successful reads: 4.*previous read: 0\/1/);
+});
+
+test('slow polls do not overlap and late replies cannot overwrite Finish state',async()=>{
+ const h=pollingHarness(),c=h.context;let resolve,reads=0;
+ c.window.keyboard.readCalibration=()=>{reads++;return new Promise(done=>{resolve=done;});};
+ const pending=h.tick();await h.tick();assert.equal(reads,1);
+ c.stopCalibrationPoll();c.$('calibration-read-status').textContent='Finish readback';
+ resolve({ok:false,error:'Stale poll failure'});await pending;
+ assert.equal(c.$('calibration-read-status').textContent,'Finish readback');
+});

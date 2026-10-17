@@ -34,9 +34,12 @@ function createWindow() {
 }
 
 ipcMain.handle('keyboard:save-memory', async () => usbOrError(() => heAdapter.saveToDeviceMemory(), null));
-ipcMain.handle('keyboard:read-device-settings', async()=>usbOrError(()=>heAdapter.transaction(d=>require('./device-settings').readSettings(d.readInit(1))),null));
+ipcMain.handle('keyboard:read-device-settings', async()=>usbOrError(()=>heAdapter.transaction(d=>require('./device-settings').readSettings(d.readInit(1),d.readInit(17))),null));
 ipcMain.handle('keyboard:set-fps-enhance', async(_event,enabled)=>usbOrError(()=>require('./device-settings').applyFps(heAdapter,heAdapter.backupDir,enabled),null,{exclusive:true}));
 ipcMain.handle('keyboard:set-performance-mode', async(_event,mode)=>usbOrError(()=>require('./device-settings').applyPerformanceMode(heAdapter,heAdapter.backupDir,mode),null,{exclusive:true}));
+for(const [channel,method] of [['auto-calibration','applyAutoCalibration'],['auto-light-off','applyAutoLightOff'],['highlight','applyHighlight'],['saturation','applySaturation']]){
+ ipcMain.handle('keyboard:set-'+channel,async(_event,value)=>usbOrError(()=>require('./device-settings')[method](heAdapter,heAdapter.backupDir,value),null,{exclusive:true}));
+}
 ipcMain.handle('keyboard:read-brightness', async () => usbOrError(() => heAdapter.readBrightness(), null));
 ipcMain.handle('keyboard:set-brightness', async (_event,value) => usbOrError(() => heAdapter.setBrightness(value), null));
 ipcMain.handle('keyboard:set-underlight-brightness', async (_event,value) => usbOrError(() => heAdapter.setUnderLightBrightness(value), null));
