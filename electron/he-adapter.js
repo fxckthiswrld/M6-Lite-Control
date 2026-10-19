@@ -34,12 +34,13 @@ class HeAdapter {
         if(saved.schema!==1||!['pending','active','finished','canceled'].includes(saved.phase)||
           typeof saved.baseline!=='string'||path.basename(saved.baseline)!==saved.baseline||
           !/^calibration-command-[a-f0-9-]+\.bin$/.test(saved.baseline)||
-          saved.selectedId!==undefined&&!layout.some(k=>k.id===saved.selectedId))throw Error('Invalid session journal');
+          saved.selectedId!==undefined&&!layout.some(k=>k.id===saved.selectedId)||
+          saved.selectedIds!==undefined&&(!Array.isArray(saved.selectedIds)||saved.selectedIds.some(id=>!layout.some(k=>k.id===id))))throw Error('Invalid session journal');
         const backup=path.join(backupDir,saved.baseline),raw=fs.readFileSync(backup);
         require('./calibration').parseCalibration(raw);
         if(require('node:crypto').createHash('sha256').update(raw).digest('hex')!==saved.sha256)throw Error('Calibration baseline checksum differs');
         this.calibrationSession={backup,phase:['pending','active'].includes(saved.phase)?'interrupted':saved.phase,
-          ...(saved.selectedId?{selectedId:saved.selectedId}:{}),recovered:true};
+          ...(saved.selectedId?{selectedId:saved.selectedId}:{}),...(saved.selectedIds?{selectedIds:saved.selectedIds}:{}),recovered:true};
       }
     }catch(error){this.calibrationRecoveryError=error.message;}
   }
@@ -47,7 +48,7 @@ class HeAdapter {
     const raw=fs.readFileSync(session.backup),journal=path.join(this.backupDir,'calibration-session.json');
     const saved={schema:1,baseline:path.basename(session.backup),phase:session.phase,
       sha256:require('node:crypto').createHash('sha256').update(raw).digest('hex'),
-      ...(session.selectedId?{selectedId:session.selectedId}:{})};
+      ...(session.selectedId?{selectedId:session.selectedId}:{}),...(session.selectedIds?{selectedIds:session.selectedIds}:{})};
     const temporary=journal+'.'+require('node:crypto').randomUUID()+'.tmp';
     fs.writeFileSync(temporary,JSON.stringify(saved,null,2),{flag:'wx'});
     fs.renameSync(temporary,journal);
@@ -67,7 +68,7 @@ class HeAdapter {
       baselineBackup:session?.backup??null,source:session?.recovered?'saved-session':'application-session',deviceStateVerified:false,
       ...(session?.recovered?{recovered:true}:{}),
       ...(this.calibrationRecoveryError?{recoveryError:this.calibrationRecoveryError}:{}),
-      ...(session?.selectedId?{selectedId:session.selectedId}:{})};
+      ...(session?.selectedId?{selectedId:session.selectedId}:{}),...(session?.selectedIds?{selectedIds:session.selectedIds}:{})};
   }
   startCalibrationTelemetry() {
     if(this.calibrationTelemetryHandle)return;
@@ -118,14 +119,16 @@ class HeAdapter {
           phase:session.phase,baselineBackup:session.backup,
           cancelVerified:session.phase==='canceled'?fs.readFileSync(session.backup).equals(raw):null,
           persistenceVerified:false};
-        if(session.selectedId){
-          const selectedChange=comparison.changedKeys.find(k=>k.id===session.selectedId);
-          const unexpected=comparison.changedRecords.filter(k=>k.id!==session.selectedId);
-          comparison.selectedScope={id:session.selectedId,
-            selectedChanged:!!selectedChange,otherRecordsUnchanged:unexpected.length===0,
+        const selectedIds=session.selectedIds||(session.selectedId?[session.selectedId]:[]);
+        if(selectedIds.length){
+          const selectedChanges=comparison.changedKeys.filter(k=>selectedIds.includes(k.id));
+          const unexpected=comparison.changedRecords.filter(k=>!selectedIds.includes(k.id));
+          const single=selectedIds.length===1?selectedChanges[0]:null;
+          comparison.selectedScope={ids:selectedIds,...(single?{id:single.id}:{}),
+            selectedChanged:selectedChanges.length>0,otherRecordsUnchanged:unexpected.length===0,
             unexpectedRecords:unexpected.map(k=>({index:k.index,id:k.id,label:k.label})),
-            verified:session.phase==='finished'&&!!selectedChange&&unexpected.length===0&&
-              selectedChange.rangeChanged&&!selectedChange.modelChanged&&!selectedChange.reservedChanged&&selectedChange.after.rangeStatus==='ok'};
+            verified:session.phase==='finished'&&selectedChanges.length>0&&unexpected.length===0&&
+              selectedChanges.every(change=>change.rangeChanged&&!change.modelChanged&&!change.reservedChanged&&change.after.rangeStatus==='ok')};
         }
         const report=backup.replace(/\.bin$/,'.json');
         fs.writeFileSync(report,JSON.stringify(comparison,null,2),{flag:'wx'});
@@ -140,10 +143,11 @@ class HeAdapter {
         statusSummary:visible.reduce((summary,key)=>(summary[key.rangeStatus]=(summary[key.rangeStatus]||0)+1,summary),{})};
     });
   }
-  calibrationCommand(command,selectedId) {
+  calibrationCommand(command,selected) {
     if (![1, 2, 3].includes(command)) throw new RangeError('Unsupported calibration command');
     if(command===1&&this.calibrationSession?.phase==='active')throw new Error('Calibration is already active');
     if(command!==1)this.stopCalibrationTelemetry();
+    const selectedIds=Array.isArray(selected)?selected.filter(Boolean):(selected?[selected]:[]);
     const result=this.transaction(device => {
       fs.mkdirSync(this.backupDir,{recursive:true});
       const before=device.readInit(24);
@@ -151,7 +155,7 @@ class HeAdapter {
       const backup=path.join(this.backupDir,`calibration-command-${require('node:crypto').randomUUID()}.bin`);
       fs.writeFileSync(backup,before,{flag:'wx'});
       if(command===1){this.calibrationLive.clear();this.calibrationLiveUpdatedAt=null;this.calibrationTelemetryFrames=0;this.calibrationTelemetryRejected=0;this.calibrationTelemetryError=null;}
-      const session=command===1?{backup,...(selectedId?{selectedId}:{})}:this.calibrationSession||{backup};
+      const session=command===1?{backup,...(selectedIds.length?{selectedIds,selectedId:selectedIds[0]}:{})}:this.calibrationSession||{backup};
       this.persistCalibrationSession({...session,phase:'pending'});
       const payload=Buffer.alloc(20); payload.set([8,48,command]); device.send(payload);
       this.calibrationSession={...session,phase:command===1?'active':command===2?'finished':'canceled'};
@@ -194,6 +198,12 @@ class HeAdapter {
     // isolation against the session backup.
     const result=this.calibrationCommand(1,id);
     return {...result,selectedId:id,scope:'selected-key'};
+  }
+  calibrateSelectedKeys(ids) {
+    if(!Array.isArray(ids)||!ids.length||ids.some(id=>!layout.some(key=>key.id===id)))throw new Error('Select one or more physical switches');
+    if(this.calibrationSession?.phase==='active')throw new Error('Calibration is already active');
+    const result=this.calibrationCommand(1,ids);
+    return {...result,selectedIds:ids,scope:'selected-keys'};
   }
   readProfile(layer) {
     return this.transaction(device=>({layer,keys:device.readProfile(layer).keys.map(displayKey),layout}));

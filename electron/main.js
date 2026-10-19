@@ -58,6 +58,7 @@ ipcMain.handle('keyboard:calibration-state', async () => usbOrError(() => heAdap
 ipcMain.handle('keyboard:calibration-command', async (_event, command) => usbOrError(() => heAdapter.calibrationCommand(command), null));
 ipcMain.handle('keyboard:reset-calibration', async () => usbOrError(() => heAdapter.resetCalibration(), null, {exclusive:true}));
 ipcMain.handle('keyboard:calibrate-selected', async (_event, id) => usbOrError(() => heAdapter.calibrateSelected(id), null));
+ipcMain.handle('keyboard:calibrate-selected-keys', async (_event, ids) => usbOrError(() => heAdapter.calibrateSelectedKeys(ids), null));
 ipcMain.handle('keyboard:read-profile', async (_event, layer) => usbOrError(() => heAdapter.readProfile(layer), null));
 ipcMain.handle('keyboard:export-he', async (event,layer)=>usbOrError(async()=>{
   if(![0,1].includes(layer))throw new Error('Select M1 or M2');

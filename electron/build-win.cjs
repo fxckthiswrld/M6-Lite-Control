@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 const fs=require('node:fs');
 const path=require('node:path');
 require('./build-ui.cjs');
@@ -10,9 +10,10 @@ fs.mkdirSync(destination,{recursive:true});
 fs.cpSync(path.join(root,'node_modules','electron','dist'),destination,{recursive:true});
 const application=path.join(destination,'resources','app');
 fs.mkdirSync(application,{recursive:true});
-for(const name of ['logo256.ico','ui-bridge.js','ui.bundle.js','ui.generated.css','ui.css','device-settings.js','eq-preference.js','eq-host.js','eq-ui.js','eq-device-session.js','eq-spectrum.js','eq-fft.js','eq-bands.js','eq-audio-capture.js','eq-audio-worklet.js','background-lifecycle.js','lighting-single.js','lighting-underlight.js','lighting-backlight.js','lighting-brightness.js','key-event-log.js','key-tester.js','preset-off.js','single-instance.js','main.js','preload.js','renderer.js','index.html','style.css','features.json','media-actions.json','device-state.js','hardware.js','transport.js','calibration.js','calibration-telemetry.js','calibration-key-order.json','he-adapter.js','he-device.js','he-profile-file.js','key-programming.js','m6up-commands.js','he-protocol.js','hid-frame.js','mag-command.js','keyboard-layout.json'])
+for(const name of ['logo256.ico','ui-bridge.js','ui.bundle.js','ui.generated.css','ui.css','ui-overrides.css','device-settings.js','eq-preference.js','eq-host.js','eq-ui.js','eq-device-session.js','eq-spectrum.js','eq-fft.js','eq-bands.js','eq-audio-capture.js','eq-audio-worklet.js','background-lifecycle.js','lighting-single.js','lighting-underlight.js','lighting-backlight.js','lighting-brightness.js','key-event-log.js','key-tester.js','preset-off.js','single-instance.js','main.js','preload.js','renderer.js','index.html','style.css','features.json','media-actions.json','device-state.js','hardware.js','transport.js','calibration.js','calibration-telemetry.js','calibration-key-order.json','he-adapter.js','he-device.js','he-profile-file.js','key-programming.js','m6up-commands.js','he-protocol.js','hid-frame.js','mag-command.js','keyboard-layout.json'])
   fs.copyFileSync(path.join(root,name),path.join(application,name));
 fs.cpSync(path.join(root,'keyboard-tester'),path.join(application,'keyboard-tester'),{recursive:true});
+fs.cpSync(path.join(root,'fonts'),path.join(application,'fonts'),{recursive:true});
 fs.writeFileSync(path.join(application,'package.json'),JSON.stringify({name:pkg.name,version:pkg.version,main:pkg.main,dependencies:pkg.dependencies},null,2));
 const copied=new Set();
 function dependency(name) {

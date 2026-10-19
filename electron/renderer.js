@@ -57,13 +57,13 @@ lightingPanel.insertAdjacentHTML('beforeend','<div class="lighting-section"><h3>
 lightingPanel.insertAdjacentHTML('beforeend','<div class="lighting-section"><h3>Under Light brightness</h3><label class="range-control"><input id="underlight-brightness" type="range" min="0" max="100" step="1" disabled><output id="underlight-brightness-value">—</output></label><button id="underlight-brightness-apply" disabled>Apply Under Light brightness</button></div>');
 lightingPanel.insertAdjacentHTML('beforeend','<h3>Under Light power</h3><label><input id="underlight-enabled" type="checkbox" disabled> Enable Under Light</label><button id="underlight-enabled-apply" disabled>Apply Under Light power</button>');
 lightingPanel.insertAdjacentHTML('beforeend','<h3>Under Light synchronization</h3><label><input id="underlight-sync" type="checkbox" disabled> Normal Sync</label><button id="underlight-sync-apply" disabled>Apply Normal Sync</button><p id="underlight-sync-note">Disable Normal Sync to edit independent Under Light effects.</p>');
-lightingPanel.insertAdjacentHTML('beforeend','<hr><h2>Single Light</h2><label><input id="single-active" type="checkbox" disabled> Enable Single Light layer</label><button id="single-active-apply" disabled>Apply layer</button><div class="controls"><label>Keys (Ctrl or Shift for a group)<select id="single-keys" multiple size="8" disabled></select></label><label><input id="single-enabled" type="checkbox" disabled> Override Back Light for selected keys</label><label>Color<input id="single-color" type="color" disabled></label></div><button id="single-read">Refresh Single Light</button><button id="single-apply" disabled>Apply to selected keys</button><p id="single-status" role="status">Read Single Light from the keyboard.</p><p>Colors override Back Light only for enabled keys while this layer is enabled. Use Save to device memory to store applied settings.</p>');
+lightingPanel.insertAdjacentHTML('beforeend','<hr><h2>Single Light</h2><label><input id="single-active" type="checkbox" disabled> Enable Single Light layer</label><button id="single-active-apply" disabled>Apply layer</button><div class="controls"><label>Keys (click one or more to select)<select id="single-keys" multiple size="8" disabled></select></label><label><input id="single-enabled" type="checkbox" disabled> Override Back Light for selected keys</label><label>Color<input id="single-color" type="color" disabled></label></div><button id="single-read">Refresh Single Light</button><button id="single-apply" disabled>Apply to selected keys</button><p id="single-status" role="status">Read Single Light from the keyboard.</p><p>Colors override Back Light only for enabled keys while this layer is enabled. Use Save to device memory to store applied settings.</p>');
 $('single-apply').insertAdjacentHTML('afterend','<div class="lighting-section"><h3>Selected keys brightness</h3><label class="range-control"><input id="single-brightness" type="range" min="0" max="100" step="1" disabled><output id="single-brightness-value">—</output></label><button id="single-brightness-apply" disabled>Apply brightness to selected keys</button><p>Brightness preserves each selected key’s RGB color. Applying a color preserves its brightness.</p></div>');
 let singleState=null,singleReady=false,singleBrightnessRaw=0;
 function showSingleSelection(){
  const ids=Array.from($('single-keys').selectedOptions,o=>o.value),keys=singleState?.keys.filter(k=>ids.includes(k.id))||[];
  if(keys.length){$('single-color').value=keys[0].color;$('single-enabled').checked=keys[0].enabled;singleBrightnessRaw=keys[0].brightness;$('single-brightness').value=Math.round(singleBrightnessRaw*100/255);updateLightingSlider('single-brightness','single-brightness-value');}
- $('single-status').textContent=keys.length?`${keys.length} key(s) selected. ${keys.some(k=>k.color!==keys[0].color||k.enabled!==keys[0].enabled||k.brightness!==keys[0].brightness)?'Mixed values; each Apply changes only its displayed setting.':'Saved values shown.'}`:'Select one or more keys.';
+ $('single-status').textContent=keys.length?`${keys.length} key(s) selected. ${keys.some(k=>k.color!==keys[0].color||k.enabled!==keys[0].enabled||k.brightness!==keys[0].brightness)?'Mixed values; each Apply changes only its displayed setting.':'Saved values shown.'}`:'Click keys on the keyboard to select one or more.';
  updateLightingControls();
 }
 async function readSingleLight(){
@@ -88,14 +88,14 @@ let lightingBrightnessReady=false,lightingModeReady=false,lightingState=null,lig
 function discardLightingDraft(){
  $('backlight-enabled').checked=!!lightingState?.enabled;
  if(singleState){$('single-active').checked=singleState.enabled;showSingleSelection();}
- if(lightingSavedBrightness!==null)$('lighting-brightness').value=lightingSavedBrightness;
+ if(lightingSavedBrightness!==null){$('lighting-brightness').value=Math.round(lightingSavedBrightness*100/255);updateLightingSlider('lighting-brightness','lighting-brightness-value');}
  if(lightingState){$('lighting-mode').value=lightingState.canSwitch?String(lightingState.mode):'';$('lighting-custom-rgb').checked=!!lightingState.customRgb;$('lighting-color').value=lightingState.color||'#000000';}
  $('lighting-speed').value=lightingState?.speed??'';
  $('lighting-reverse').checked=!!lightingState?.reverse;
  if(underLightState)$('underlight-mode').value=underLightState.canSwitch?String(underLightState.mode):'';
  $('underlight-custom-rgb').checked=!!underLightState?.customRgb;$('underlight-color').value=underLightState?.color||'#000000';
  $('underlight-speed').min=0;$('underlight-speed').max=100;$('underlight-speed').value=underLightState?speedToPercent(underLightState.speed,underLightState.speedMinimum,underLightState.speedMaximum):'';
- $('underlight-brightness').value=underLightState?.brightness??'';
+ $('underlight-brightness').value=underLightState?Math.round(underLightState.brightness*100/255):'';updateLightingSlider('underlight-brightness','underlight-brightness-value');
  $('underlight-enabled').checked=!!underLightState?.enabled;
  $('underlight-sync').checked=underLightState?.sync===1;
  updateLightingControls();
@@ -334,26 +334,30 @@ for(const name of ['media','layer'])$(name+'-standard').onclick=async()=>{
  catch(e){$(name+'-status').textContent=e.message;}finally{setBusy(false);}
 };
 const calibrationPanel=document.createElement('section');calibrationPanel.className='panel';calibrationPanel.hidden=true;
-calibrationPanel.innerHTML='<small>HALL EFFECT</small><h2>Calibration</h2><p>Read the saved sensor ranges for every switch. Reading creates a local backup and preserves the current calibration.</p><button id="calibration-read">Refresh calibration</button><button id="calibration-reset" class="secondary">Reset all calibration</button><button id="calibration-start">Calibrate all</button><button id="calibration-selected">Calibrate selected key</button><button id="calibration-finish" hidden>Finish</button><button id="calibration-cancel" class="secondary" hidden>Cancel</button><p id="calibration-status" role="status" aria-live="polite">Not read yet.</p><div id="calibration-map" class="keyboard" aria-label="Saved switch calibration"></div><p>OK = a saved working sensor range. Not calibrated = factory/reset baseline 2000 / 2200. Error = an unexpected range. Empty = both values are zero.</p><p><strong>Reset all calibration</strong> restores every saved sensor range to 2000 / 2200. A backup is created before the reset. This operation cannot be undone automatically.</p><p><strong>Selected-key flow:</strong> press only the selected switch, choose Finish, then confirm the vendor save prompt. The keyboard may reconnect.</p>';
+calibrationPanel.innerHTML='<small>HALL EFFECT</small><h2>Calibration</h2><p>Read the saved sensor ranges for every switch. Reading creates a local backup and preserves the current calibration.</p><button id="calibration-read">Refresh calibration</button><button id="calibration-reset" class="secondary">Reset all calibration</button><button id="calibration-start">Calibrate all</button><button id="calibration-selected">Calibrate selected key</button><button id="calibration-finish" hidden>Finish</button><button id="calibration-cancel" class="secondary" hidden>Cancel</button><p id="calibration-status" role="status" aria-live="polite">Not read yet.</p><p id="calibration-live" class="calibration-live" role="status" aria-live="polite"></p><p id="calibration-read-status" class="calibration-read-status">No successful read yet.</p><p>OK = a saved working sensor range. Not calibrated = factory/reset baseline 2000 / 2200. Error = an unexpected range. Empty = both values are zero.</p><p><strong>Reset all calibration</strong> restores every saved sensor range to 2000 / 2200. A backup is created before the reset. This operation cannot be undone automatically.</p><p><strong>Selected-key flow:</strong> tap a switch above, choose Calibrate selected key, press only that switch, choose Finish, then confirm the vendor save prompt. The keyboard may reconnect.</p>';
 pendingPanel.after(calibrationPanel);
-const calibrationReadStatus=document.createElement('p');calibrationReadStatus.id='calibration-read-status';calibrationReadStatus.textContent='No successful read yet.';$('calibration-map').before(calibrationReadStatus);
-let calibrationActive=false,calibrationStateKnown=false,calibrationPoll=null;
-let calibrationPollPending=false,calibrationPollGeneration=0,calibrationReadCount=0,calibrationPreviousRanges=null;
-function stopCalibrationPoll(){calibrationPollGeneration++;if(calibrationPoll){clearInterval(calibrationPoll);calibrationPoll=null;}}
+const calibrationMap=document.createElement('div');calibrationMap.id='calibration-map';calibrationMap.className='keyboard';calibrationMap.setAttribute('aria-label','Saved switch calibration');calibrationMap.hidden=true;$('keyboard').after(calibrationMap);
+let calibrationActive=false,calibrationStateKnown=false,calibrationPoll=null,calibrationLiveBaseline=null,calibrationSelectedIds=new Set();
+let calibrationPollBusy=false,calibrationPollGeneration=0,calibrationReadCount=0,calibrationPreviousRanges=null;
+function stopCalibrationPoll(){calibrationPollGeneration++;if(calibrationPoll){clearTimeout(calibrationPoll);calibrationPoll=null;}}
 function startCalibrationPoll(){
   stopCalibrationPoll();const generation=calibrationPollGeneration;
-  calibrationPoll=setInterval(async()=>{
-    if(!calibrationActive||busy||calibrationPollPending)return;
-    calibrationPollPending=true;
+  const tick=async()=>{
+    if(!calibrationActive||generation!==calibrationPollGeneration)return;
+    if(busy||calibrationPollBusy){calibrationPoll=setTimeout(tick,750);return;}
+    calibrationPollBusy=true;
     try{await refreshCalibration(true,generation);}
-    catch(error){if(generation===calibrationPollGeneration)$('calibration-read-status').textContent=`Read failed: ${error.message}. Displayed values are from the last successful read.`;}
-    finally{calibrationPollPending=false;}
-  },1000);
+    catch(error){if(generation===calibrationPollGeneration){const read=$('calibration-read-status');if(read)read.textContent=`Read failed: ${error.message}. Displayed values are from the last successful read.`;}}
+    finally{calibrationPollBusy=false;if(calibrationActive&&generation===calibrationPollGeneration)calibrationPoll=setTimeout(tick,750);}
+  };
+  tick();
 }
-function setCalibrationActive(value){calibrationActive=value;$('calibration-start').hidden=value;$('calibration-selected').hidden=value;$('calibration-finish').hidden=!value;$('calibration-cancel').hidden=!value;}
+function setCalibrationActive(value){calibrationActive=value;if(value)calibrationLiveBaseline=null;$('calibration-start').hidden=value;$('calibration-selected').hidden=value;$('calibration-finish').hidden=!value;$('calibration-cancel').hidden=!value;$('calibration-reset').disabled=value||!calibrationStateKnown;const live=$('calibration-live');if(live){live.classList.toggle('active',value);if(!value)live.textContent='';}}
 function updateSelectedCalibrationButton(){
-  $('calibration-selected').disabled=busy||!calibrationStateKnown||calibrationActive||!selectedId;
-  $('calibration-selected').title=selectedId?`Calibrate ${profile?.layout.find(k=>k.id===selectedId)?.label||selectedId}`:'Select a switch first';
+  const calibrationCount=calibrationSelectedIds.size||(selectedId?1:0);
+  $('calibration-selected').textContent=calibrationCount>1?'Calibrate selected keys':'Calibrate selected key';
+  $('calibration-selected').disabled=busy||!calibrationStateKnown||calibrationActive||!calibrationCount;
+  $('calibration-selected').title=calibrationCount>1?`Calibrate ${calibrationCount} selected switches`:(calibrationCount===1?`Calibrate ${profile?.layout.find(k=>k.id===selectedId)?.label||selectedId}`:'Select one or more switches first');
   $('calibration-start').disabled=busy||!calibrationStateKnown||calibrationActive;
   $('calibration-reset').disabled=busy||!calibrationStateKnown||calibrationActive;
   $('calibration-finish').disabled=busy||!calibrationStateKnown||!calibrationActive;
@@ -365,17 +369,18 @@ async function restoreCalibrationState(){
   try{
     const reply=await window.keyboard.calibrationState();
     if(!reply.ok)throw new Error(reply.error);
+    calibrationSelectedIds=new Set(reply.result.selectedIds||(reply.result.selectedId?[reply.result.selectedId]:[]));
     setCalibrationActive(reply.result.active);
     calibrationStateKnown=true;
+    updateSelectedCalibrationButton();
     if(reply.result.recoveryError){
       $('calibration-status').textContent='Previous calibration session could not be recovered: '+reply.result.recoveryError+'. Existing backups were retained. Refresh calibration to inspect current ranges.';
     }else if(reply.result.phase==='interrupted'){
       $('calibration-status').textContent='An interrupted calibration session was recovered. Device calibration state is unknown. Refresh calibration to compare saved ranges with the retained backup. No command was sent automatically.';
     }
     if(reply.result.active){
-      const selected=reply.result.selectedId;
-      const label=profile?.layout.find(k=>k.id===selected)?.label||selected;
-      $('calibration-status').textContent='An active calibration session was restored.'+(selected?` Press only ${label}.`:'')+' Choose Finish or Cancel when ready.';
+      const names=[...calibrationSelectedIds].map(id=>profile?.layout.find(k=>k.id===id)?.label||id);
+      $('calibration-status').textContent='An active calibration session was restored.'+(names.length?` Press only ${names.join(', ')}.`:'')+' Choose Finish or Cancel when ready.';
       if(typeof startCalibrationPoll==='function')startCalibrationPoll();
     }else if(['finished','canceled'].includes(reply.result.phase)){
       $('calibration-status').textContent='Previous calibration '+(reply.result.phase==='finished'?'Finish':'Cancel')+' command was sent. Use Refresh calibration to verify saved ranges against the session backup.';
@@ -401,11 +406,16 @@ async function calibrationCommand(command){
     setCalibrationActive(command===1);
     if(command===1){
       $('calibration-status').textContent='Calibration started. Reading saved ranges and listening for live calibration telemetry. Press switches in any order, then choose Finish.';if(typeof startCalibrationPoll==='function')startCalibrationPoll();
+    }else if(command===2){
+      if(typeof stopCalibrationPoll==='function')stopCalibrationPoll();
+      setCalibrationActive(false);
+      $('calibration-status').textContent='Finish command sent. Keyboard is restarting; reloading in 8 seconds...';
+      setTimeout(()=>window.location.reload(),8000);
     }else{
       if(typeof stopCalibrationPoll==='function')stopCalibrationPoll();
       await new Promise(r=>setTimeout(r,1500));
       await readCalibrationAfterReconnect();
-      $('calibration-status').textContent=(command===2?'Finish command sent. ':'Cancel command sent. ')+$('calibration-status').textContent;
+      $('calibration-status').textContent='Cancel command sent. '+$('calibration-status').textContent;
     }
   }catch(error){$('calibration-status').textContent=error.message;}
   finally{setBusy(false);}
@@ -425,10 +435,18 @@ $('calibration-reset').onclick=async()=>{
   finally{setBusy(false);updateSelectedCalibrationButton();}
 };
 $('calibration-selected').onclick=async()=>{
-  if(busy||!calibrationStateKnown||calibrationActive||!selectedId)return;
-  setBusy(true);$('calibration-status').textContent=`Starting selected-key calibration for ${profile?.layout.find(k=>k.id===selectedId)?.label||selectedId}...`;
-  try{const reply=await window.keyboard.calibrateSelected(selectedId);if(!reply.ok)throw new Error(reply.error);setCalibrationActive(true);$('calibration-status').textContent=`Selected-key calibration started for ${profile?.layout.find(k=>k.id===selectedId)?.label||selectedId}. Live telemetry will mark received values; press only this key, then choose Finish.`;startCalibrationPoll();}
-  catch(error){$('calibration-status').textContent=error.message;}finally{setBusy(false);updateSelectedCalibrationButton();}
+  const ids=[...calibrationSelectedIds];if(!ids.length&&selectedId)ids.push(selectedId);
+  if(busy||!calibrationStateKnown||calibrationActive||!ids.length)return;
+  const names=ids.map(id=>profile?.layout.find(k=>k.id===id)?.label||id);
+  setBusy(true);$('calibration-status').textContent=`Starting calibration for ${names.join(', ')}...`;
+  try{
+    const reply=await window.keyboard.calibrateSelectedKeys(ids);
+    if(!reply.ok)throw new Error(reply.error);
+    setCalibrationActive(true);
+    $('calibration-status').textContent=ids.length===1?`Selected-key calibration started for ${names[0]}. Live telemetry will mark received values; press only this key, then choose Finish.`:`Calibration started for ${ids.length} switches: ${names.join(', ')}. Live telemetry will mark received values; press only the selected switches, then choose Finish.`;
+    startCalibrationPoll();
+  }catch(error){$('calibration-status').textContent=error.message;}
+  finally{setBusy(false);updateSelectedCalibrationButton();}
 };
 $('calibration-finish').onclick=()=>{
   const prompt='Calibration finished, save calibration values?\n\nSaved values will automatically restart the keyboard.';
@@ -440,31 +458,43 @@ async function refreshCalibration(silent=false,generation){
     if(generation!==undefined&&generation!==calibrationPollGeneration)return;
     if(!reply.ok)throw new Error(reply.error);
     const data=reply.result;
+    const displayRecord=physical=>{const stored=data.records[physical.row*14+physical.col],live=data.live?.active?data.live.records?.[physical.id]:null;return {stored,liveRecord:live,record:live||stored,pending:data.live?.active&&!live};};
+    const changedIds=new Set(),changeInfo=new Map();
+    if(calibrationActive){
+      if(!calibrationLiveBaseline)calibrationLiveBaseline=new Map();
+      for(const physical of data.layout){
+        const {stored,liveRecord,record}=displayRecord(physical);if(!record)continue;
+        if(liveRecord&&(liveRecord.min!==stored.min||liveRecord.max!==stored.max)){changedIds.add(physical.id);if(!changeInfo.has(physical.id))changeInfo.set(physical.id,stored);}
+        const previous=calibrationLiveBaseline.get(physical.id);
+        if(!previous)calibrationLiveBaseline.set(physical.id,{min:record.min,max:record.max});
+        else if(previous.min!==record.min||previous.max!==record.max){changedIds.add(physical.id);changeInfo.set(physical.id,previous);}
+      }
+      for(const change of data.comparison?.changedKeys||[]){changedIds.add(change.id);if(!changeInfo.has(change.id))changeInfo.set(change.id,change.before);}
+    }
     const fragment=document.createDocumentFragment();
     for(const physical of data.layout){
-      const record=data.records[physical.row*14+physical.col];
-      const liveRecord=data.live?.active?data.live.records?.[physical.id]:null;
-      const pending=data.live?.active&&!liveRecord;
-      const displayRecord=liveRecord||record;
-      const displayState=pending?'pending':displayRecord.rangeStatus;
-      const key=document.createElement('div');key.className='calibration-key';key.dataset.id=physical.id;key.dataset.state=displayState;
+      const {stored,liveRecord,record,pending}=displayRecord(physical);
+      const changed=calibrationActive&&changedIds.has(physical.id),previous=changed?changeInfo.get(physical.id):null;
+      const key=document.createElement('button');key.type='button';key.className='calibration-key';key.dataset.id=physical.id;key.dataset.state=pending?'pending':record.rangeStatus;
+      if(calibrationSelectedIds.has(physical.id))key.classList.add('chosen');
+      if(changed)key.classList.add('changed');
       key.style.left=`${3+physical.x/680*94}%`;key.style.top=`${18+physical.y*1.65}px`;key.style.width=`${physical.width/680*94}%`;
-      const stateLabel=liveRecord?(liveRecord.rangeStatus==='ok'?'OK · live':liveRecord.rangeStatus):pending?'Pending':record.rangeStatus==='ok'?'OK':record.rangeStatus;
-      const values=liveRecord?`${liveRecord.min} / ${liveRecord.max}`:`${record.min} / ${record.max}${pending?' · stored':''}`;
+      const stateLabel=liveRecord?(liveRecord.rangeStatus==='ok'?'OK · live':liveRecord.rangeStatus):pending?'Pending':stored.rangeStatus==='ok'?'OK':stored.rangeStatus;
+      const values=liveRecord?`${liveRecord.min} / ${liveRecord.max}`:`${stored.min} / ${stored.max}${pending?' · stored':''}`;
       for(const value of [physical.label||'Space',stateLabel,values]){const label=document.createElement('span');label.textContent=value;key.appendChild(label);}
-      key.title=liveRecord?`${physical.label}: live sensor min ${liveRecord.min}, max ${liveRecord.max}`:`${physical.label}: stored sensor min ${record.min}, max ${record.max}${pending?' (no live measurement received yet)':''}`;
+      key.title=liveRecord?`${physical.label}: live sensor min ${liveRecord.min}, max ${liveRecord.max}`:`${physical.label}: stored sensor min ${stored.min}, max ${stored.max}${pending?' (no live measurement received yet)':''}${previous?` · was ${previous.min} / ${previous.max}`:''}. Tap to select for single-switch calibration.`;
+      key.onclick=()=>selectCalibrationKey(physical.id);
       fragment.appendChild(key);
     }
     $('calibration-map').replaceChildren(fragment);
-    const ranges=new Map(data.layout.map(physical=>{
-      const stored=data.records[physical.row*14+physical.col],live=data.live?.active?data.live.records?.[physical.id]:null,record=live||stored;
-      return [physical.id,`${record.min}/${record.max}`];
-    }));
+    const ranges=new Map(data.layout.map(physical=>{const {record}=displayRecord(physical);return [physical.id,`${record.min}/${record.max}`];}));
     const changed=calibrationPreviousRanges?[...ranges].filter(([id,value])=>calibrationPreviousRanges.get(id)!==value).length:null;
     calibrationPreviousRanges=ranges;calibrationReadCount++;
     const telemetryDetail=data.live?.active?` Frames: ${data.live.frames??0}${data.live.rejected?`, rejected: ${data.live.rejected}`:''}${data.live.error?`, error: ${data.live.error}`:''}.`:'';
-    const liveStatus=data.live?.active?(data.live.available?` Live calibration telemetry: ${data.live.count}/${data.layout.length} switches. Values marked “live”; remaining values are stored.${telemetryDetail}`:` Live telemetry not observed yet; values shown are stored and remaining switches are Pending.${telemetryDetail}`) : '';
+    const liveStatus=data.live?.active?(data.live.available?` Live calibration telemetry: ${data.live.count}/${data.layout.length} switches. Values marked “live”; remaining values are stored.${telemetryDetail}`:` Live telemetry not observed yet; values shown are stored and remaining switches are Pending.${telemetryDetail}`):'';
     $('calibration-read-status').textContent=`Updated: ${data.readAt}. Successful reads: ${calibrationReadCount}. ${changed===null?'First reading.':`Ranges changed since previous read: ${changed}/${data.layout.length}.`}${liveStatus}${data.live?.active?'':' Updated confirms a successful read, not a new calibration measurement.'}`;
+    const live=$('calibration-live');
+    if(live&&calibrationActive){const d=data.live,stamp=new Date().toLocaleTimeString();live.textContent=(d?.active?(d.available?`LIVE · ${d.count}/${data.layout.length} switches · frames ${d.frames??0}${d.rejected?` · rejected ${d.rejected}`:''}`:'LIVE · telemetry not observed yet'):'LIVE · waiting for telemetry')+` · updated ${stamp}`;}
     const summary=Object.entries(data.statusSummary||{}).map(([name,count])=>`${name}: ${count}`).join(' ? ');
     if(!silent)$('calibration-status').textContent=`Read ${data.layout.length} switches${summary?` ? ${summary}`:''}. Backup: ${data.backup}`;
     if(data.comparison){
@@ -473,11 +503,24 @@ async function refreshCalibration(silent=false,generation){
       const cancel=result.cancelVerified===true?' Cancel verified: saved calibration unchanged.':result.cancelVerified===false?' Cancel verification failed: saved calibration differs from the backup.':'';
       if(!silent)$('calibration-status').textContent+=` Changed switches: ${names}. Unchanged: ${result.unchangedKeyCount}/${data.layout.length}. Other changed records: ${result.hiddenRecordChanges}.${cancel}`;
       if(!silent&&result.selectedScope){
-        const scope=result.selectedScope;
-        $('calibration-status').textContent+=scope.verified?' Selected-key calibration verified: only the selected range changed; all other records are unchanged.':!scope.otherRecordsUnchanged?' Selected-key isolation failed: other calibration records changed. See the comparison report.':!scope.selectedChanged?' Selected range did not change; a new calibration result is not verified.':' Selected-key calibration is not yet verified.';
+        const scope=result.selectedScope,scopeLabel=scope.ids?.length>1?`${scope.ids.length} selected ranges`:'the selected range';
+        $('calibration-status').textContent+=scope.verified?` Calibration verified: only ${scopeLabel} changed; all other records are unchanged.`:!scope.otherRecordsUnchanged?' Calibration isolation failed: other calibration records changed. See the comparison report.':!scope.selectedChanged?` ${scopeLabel} did not change; a new calibration result is not verified.`:' Calibration is not yet verified.';
         $('calibration-status').textContent+=' Report: '+result.report;
       }
     }
+}
+function selectCalibrationKey(id){
+  if(busy)return;
+  if(calibrationSelectedIds.has(id))calibrationSelectedIds.delete(id);else calibrationSelectedIds.add(id);
+  selectedId=[...calibrationSelectedIds].pop()||'';
+  selectedIds=new Set(calibrationSelectedIds);
+  if(selectedId)showSelected();else refreshSelection();
+  for(const key of $('calibration-map').querySelectorAll('.calibration-key'))key.classList.toggle('chosen',calibrationSelectedIds.has(key.dataset.id));
+  const count=calibrationSelectedIds.size;
+  if(!count)$('calibration-status').textContent='Tap one or more switches to select them for calibration.';
+  else if(count===1){const physical=profile?.layout.find(k=>k.id===selectedId);$('calibration-status').textContent=`${physical?.label||selectedId} selected. Choose Calibrate selected key.`;}
+  else $('calibration-status').textContent=`${count} switches selected. Choose Calibrate selected keys.`;
+  updateSelectedCalibrationButton();
 }
 $('calibration-read').onclick=async()=>{
   if(busy)return;setBusy(true);$('calibration-status').textContent='Reading calibration...';
@@ -548,7 +591,7 @@ function setBusy(value) {
   const lockSource=$('remap-source').value;
   const lockKey=programming?.keys.find(k=>`${k.row}:${k.col}`===lockSource);
   for(const id of ['key-enabled','key-enabled-apply'])$(id).disabled=value||!lockKey||![0,2,3,4,5,6].includes(lockKey.mode);
-  $('programming-reset').disabled=value||!programming;
+  $('programming-reset').disabled=value||!programming;if($('programming-reset-all'))$('programming-reset-all').disabled=value||!programming;
   $('device-fps').disabled=value||!deviceSettings?.canEditFps;
   $('device-mode-apply').disabled=value||!deviceSettings?.canEditPerformance;
   settingsPanel.querySelectorAll('[data-performance-mode]').forEach(button=>{button.disabled=value||!deviceSettings?.canEditPerformance;});
@@ -574,11 +617,26 @@ function showSelected() {
 function displayTravel(key){return {trigger:(key.rtOn?key.trigger:key.fixedDown).toFixed(3),release:(key.rtOn?key.release:key.fixedUp).toFixed(3)};}
 const keyStateSummary=document.createElement('p');keyStateSummary.id='key-state-summary';keyStateSummary.setAttribute('role','status');
 $('keyboard').after(keyStateSummary);
+function programmingBadge(assignment){
+ if(!assignment)return null;
+ const labelFor=id=>profile?.layout.find(k=>k.id===id)?.label||id;
+ if(assignment.mode===5)return {text:'SNAP',kind:'snap'};
+ if(assignment.mode===6)return {text:'SOCD',kind:'snap'};
+ if(assignment.mode===4)return {text:assignment.dks?.type===1?'DKS-MOUSE':'DKS',kind:'dks'};
+ if(assignment.mode===3)return {text:[0,1,2].includes(assignment.layer?.layer)?`FN${assignment.layer.layer+1}`:'FN',kind:'fn'};
+ if(assignment.mode===2)return {text:'MEDIA',kind:'media'};
+ if(assignment.mode===0&&assignment.modify?.type===0&&assignment.modify.row>=1&&(assignment.modify.row!==assignment.row+1||assignment.modify.col!==assignment.col)){
+  const id=`${assignment.modify.row-1}:${assignment.modify.col}`;return {text:`->${labelFor(id)}`,kind:'remap'};
+ }
+ return null;
+}
 function updateProgrammingIndicators(){
  const disabled=[];
  for(const button of $('keyboard').querySelectorAll('.key')){
   const assignment=programming?.keys.find(k=>k.row+':'+k.col===button.dataset.id);
   const off=assignment?.locked===1;button.classList.toggle('key-off',off);
+  const badge=programmingBadge(assignment);
+  if(badge){button.dataset.assignment=badge.text;button.dataset.assignmentKind=badge.kind;}else{delete button.dataset.assignment;delete button.dataset.assignmentKind;}
   if(!profile){const unavailable=button.querySelector('.key-label').textContent+', device state unavailable';button.title=unavailable;button.setAttribute('aria-label',unavailable);}
   if(off)disabled.push(button.querySelector('.key-label').textContent);
  }
@@ -649,8 +707,9 @@ async function loadProfile(nextLayer=layer) {
     $('status').textContent=error.message;
   } finally {setBusy(false);}
 }
-$('read').onclick=()=>loadProfile();
-$('save-memory').onclick=async()=>{if(busy)return;setBusy(true);$('status').textContent='Saving to device memory...';try{const reply=await window.keyboard.saveToDeviceMemory();if(!reply.ok)throw new Error(reply.error);$('status').textContent='Save command acknowledged. Power-cycle verification is still required.';}catch(e){$('status').textContent=e.message;}finally{setBusy(false);}};
+function setDeviceDataStatus(message){const status=document.getElementById('device-data-status');if(status)status.textContent=message;}
+$('read').onclick=()=>{setDeviceDataStatus('Reading keyboard configuration...');loadProfile();};
+$('save-memory').onclick=async()=>{if(busy)return;setBusy(true);const message='Saving to device memory...';$('status').textContent=message;setDeviceDataStatus(message);try{const reply=await window.keyboard.saveToDeviceMemory();if(!reply.ok)throw new Error(reply.error);const done='Save command acknowledged. Power-cycle verification is still required.';$('status').textContent=done;setDeviceDataStatus(done);}catch(e){$('status').textContent=e.message;setDeviceDataStatus(e.message);}finally{setBusy(false);}};
 async function saveChanges(all=false) {
   if(busy||!profile)return;
   const request={id:selectedId,ids:[...selectedIds],layer,rtOn:$('rt').checked};
@@ -681,16 +740,15 @@ function changeMode(rtOn){
   $('mode-mechanical').setAttribute('aria-pressed',String(!rtOn));$('mode-rt').setAttribute('aria-pressed',String(rtOn));
 }
 $('mode-mechanical').onclick=()=>changeMode(false);$('mode-rt').onclick=()=>changeMode(true);
-const editHint=document.createElement('p');editHint.textContent='Choose a mode and values, then Apply to the selected switches. Apply to all writes to the entire profile.';
-hePanel.querySelector('.panel-head').after(editHint);
 $('apply').onclick=()=>saveChanges(true);
 function showPairState(){
   if(!programming)return;
   const names={0:'Standard',2:'Media',3:'FN/layer',4:'DKS',5:'Snap Tap',6:'SOCD / AD Cancel'};
   $('pair-current').textContent=['pair-first','pair-second'].map(id=>{
     const physical=profile.layout.find(k=>k.id===$(id).value);
+    if(!physical)return 'Select a switch';
     const key=programming.keys.find(k=>k.row===physical.row&&k.col===physical.col);
-    return `${physical.label}: ${names[key.mode]||'Other mode'}${key.locked?' (key disabled)':''}`;
+    return key?`${physical.label}: ${names[key.mode]||'Other mode'}${key.locked?' (key disabled)':''}`:`${physical.label}: Unreadable`;
   }).join(' · ');
 }
 function showDksState(){
@@ -766,8 +824,8 @@ async function applyPair(disable=false){
   finally{setBusy(false);}
 }
 $('pair-apply').onclick=()=>applyPair();$('pair-disable').onclick=()=>applyPair(true);
-const settingsPanel=document.createElement('section');settingsPanel.className='panel';settingsPanel.hidden=true;
-settingsPanel.innerHTML='<small>DEVICE SETTINGS</small><div class="performance-card"><div class="performance-heading"><h2 id="performance-name">Performance mode</h2><label class="fps-switch"><span>FPS Enhance</span><input id="device-fps" type="checkbox" disabled></label></div><p>Switching modes reboots the keyboard.</p><div class="performance-modes" role="group" aria-label="Performance mode"><button type="button" data-performance-mode="0" aria-pressed="false">BeastMode</button><button type="button" data-performance-mode="1" aria-pressed="false">EyeMode</button><button type="button" data-performance-mode="2" aria-pressed="false">DevMode</button></div><div class="actions"><button id="device-mode-apply" disabled>Apply mode</button><button id="device-settings-read" class="secondary">Refresh</button></div></div><p>FPS Enhance is independent of the selected mode. It prioritizes scanning the two rows containing WASD; other rows use a lower scan rate.</p><p>Applying either setting reconnects the keyboard. Use Save to device memory to store it.</p><p id="device-settings-status" role="status"></p>';
+const settingsPanel=document.createElement('section');settingsPanel.className='panel';settingsPanel.id='settings-panel';settingsPanel.hidden=true;
+settingsPanel.innerHTML='<small>DEVICE SETTINGS</small><div class="performance-card"><div class="performance-heading"><h2 id="performance-name">Keyboard Mode</h2><label class="fps-switch"><span>FPS Enhance</span><input id="device-fps" type="checkbox" disabled></label></div><p>Switching modes reboots the keyboard.</p><div class="performance-modes" role="group" aria-label="Keyboard mode"><button type="button" data-performance-mode="0" aria-pressed="false">BeastMode</button><button type="button" data-performance-mode="1" aria-pressed="false">EyeMode</button><button type="button" data-performance-mode="2" aria-pressed="false">DevMode</button></div><div class="actions"><button id="device-mode-apply" disabled>Apply mode</button><button id="device-settings-read" class="secondary">Refresh</button></div></div><p>FPS Enhance is independent of the selected mode. It prioritizes scanning the two rows containing WASD; other rows use a lower scan rate.</p><p>Applying either setting reconnects the keyboard. Use Save to device memory to store it.</p><p id="device-settings-status" role="status"></p>';
 remapPanel.after(settingsPanel);let deviceSettings=null,performanceDraft=null;
 settingsPanel.insertAdjacentHTML('beforeend',`
  <div class="device-options-grid">
@@ -831,7 +889,7 @@ settingsPanel.querySelectorAll('.device-option input').forEach(input=>input.addE
 }));
 function showPerformanceMode(){
  performanceDraft=deviceSettings?.canEditPerformance?deviceSettings.performanceMode:null;
- $('performance-name').textContent=deviceSettings?.performanceName||'Performance mode';
+ $('performance-name').textContent='Keyboard Mode';
  for(const button of settingsPanel.querySelectorAll('[data-performance-mode]'))button.setAttribute('aria-pressed',String(Number(button.dataset.performanceMode)===performanceDraft));
 }
 for(const button of settingsPanel.querySelectorAll('[data-performance-mode]'))button.onclick=()=>{
@@ -844,12 +902,14 @@ async function deviceSettingsAction(apply=false){
  const action=settingActions[apply];
  if(busy||(action?!deviceSettings?.[action.capability]:apply==='mode'?!deviceSettings?.canEditPerformance:apply&&!deviceSettings?.canEditFps))return;
  const enabled=$('device-fps').checked,mode=performanceDraft;setBusy(true);$('device-settings-status').textContent=apply?'Applying device settings...':'Reading device settings...';
+ let reloadAfterRestart=false;
  try{
   const reply=await (action?action.apply():apply==='mode'?window.keyboard.setPerformanceMode(mode):apply?window.keyboard.setFpsEnhance(enabled):window.keyboard.readDeviceSettings());
-  if(!reply.ok)throw Error(reply.error);deviceSettings=apply?{...deviceSettings,...reply.result}:reply.result;showDeviceSettings();
-   $('device-settings-status').textContent=apply?(apply==='mode'?'Performance mode command accepted. The keyboard is reconnecting; use Refresh after it returns.':(action?.label||'FPS Enhance')+' applied. Device readback and preservation of other sections verified.'):'Device settings read from keyboard.';
+  if(!reply.ok)throw Error(reply.error);deviceSettings=apply?{...deviceSettings,...reply.result}:reply.result;showDeviceSettings();reloadAfterRestart=apply==='mode'&&!!reply.result.reconnectPending;
+   $('device-settings-status').textContent=apply?(reloadAfterRestart?'Performance mode applied. Reloading after keyboard restart...':(action?.label||'FPS Enhance')+' applied. Device readback and preservation of other sections verified.'):'Device settings read from keyboard.';
  }catch(error){deviceSettings=null;showDeviceSettings();$('device-settings-status').textContent=error.message;}
  finally{setBusy(false);}
+ if(reloadAfterRestart){setTimeout(()=>window.location.reload(),900);return;}
 }
 $('device-mode-apply').onclick=()=>deviceSettingsAction('mode');
 $('device-settings-read').onclick=()=>deviceSettingsAction();$('device-fps').onchange=()=>deviceSettingsAction(true);
