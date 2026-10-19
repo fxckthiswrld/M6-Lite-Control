@@ -37,13 +37,22 @@ jobs:
 
       - name: Install NSIS
         shell: pwsh
-        run: choco install nsis --yes --no-progress
+        run: |
+          winget install --id NSIS.NSIS --exact --silent --accept-package-agreements --accept-source-agreements --disable-interactivity
+          $found = @("${env:ProgramFiles(x86)}\NSIS\makensis.exe", "$env:ProgramFiles\NSIS\makensis.exe", "$env:LOCALAPPDATA\Programs\NSIS\makensis.exe") | Where-Object { Test-Path $_ }
+          if (-not $found) { choco install nsis --yes --no-progress }
 
       - name: Build installer
         shell: pwsh
         run: |
           $version = node -p "require('./electron/package.json').version"
-          & "${env:ProgramFiles(x86)}\NSIS\makensis.exe" "/DAPP_VERSION=$version" "installer\M6-Lite-Control.nsi"
+          $candidates = @("${env:ProgramFiles(x86)}\NSIS\makensis.exe", "$env:ProgramFiles\NSIS\makensis.exe", "$env:LOCALAPPDATA\Programs\NSIS\makensis.exe")
+          $makensis = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $makensis) {
+            $makensis = (Get-ChildItem -Path "$env:ProgramFiles", "${env:ProgramFiles(x86)}", "$env:LOCALAPPDATA\Programs" -Filter makensis.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+          }
+          if (-not $makensis) { throw 'makensis.exe was not found after NSIS installation.' }
+          & $makensis "/DAPP_VERSION=$version" "installer\M6-Lite-Control.nsi"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload build artifacts
