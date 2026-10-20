@@ -74,12 +74,13 @@ ipcMain.handle('keyboard:export-he', async (event,layer)=>usbOrError(async()=>{
   const document=heAdapter.exportHeProfile(layer);
   fs.writeFileSync(selected.filePath,JSON.stringify(document,null,2)+'\n','utf8');return {path:selected.filePath};
 },null));
-ipcMain.handle('keyboard:import-he', async (event,layer)=>usbWrite(async()=>{
+ipcMain.handle('keyboard:import-he', async (event,layer)=>usbOrError(async()=>{
   if(![0,1].includes(layer))throw new Error('Select M1 or M2');
   const selected=await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender),{title:`Import HE into M${layer+1}`,properties:['openFile'],filters:[{name:'HE profile JSON',extensions:['json']}]});
   if(selected.canceled)return {canceled:true};
   const file=selected.filePaths[0];if(fs.statSync(file).size>128*1024)throw new Error('HE profile file is too large');
-  return heAdapter.importHeProfile(layer,JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,'')));
+  const document=JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,''));
+  return heAdapter.persistHeChange(device=>heAdapter.importHeProfile(layer,document,device));
 },null));
 ipcMain.handle('keyboard:read-programming', async (_event, layer) => usbOrError(() => heAdapter.readProgramming(layer), null));
 ipcMain.handle('keyboard:set-pair', async (_event, request) => usbWrite(() => heAdapter.setPair(request), null));

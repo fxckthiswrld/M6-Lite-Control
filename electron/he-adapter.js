@@ -24,7 +24,7 @@ function displayKey(key) {
   return {...key, rtOn: !!key.rtOn, ...Object.fromEntries(fields.map(f=>[f,key[f]/500]))};
 }
 class HeAdapter {
-  constructor(backupDir,{saveDelayMs=2000,saveSettleMs=1000}={}) {
+  constructor(backupDir,{saveDelayMs=0,saveSettleMs=1000}={}) {
     this.backupDir=backupDir;
     this.saveDelayMs=saveDelayMs;
     this.saveSettleMs=saveSettleMs;
@@ -59,27 +59,47 @@ class HeAdapter {
     fs.writeFileSync(temporary,JSON.stringify(saved,null,2),{flag:'wx'});
     fs.renameSync(temporary,journal);
   }
-  saveToDeviceMemory(activeDevice = null) {
-    const save = device => {
+  prepareDeviceMemorySave(device) {
       fs.mkdirSync(this.backupDir,{recursive:true});
       const backup=path.join(this.backupDir,`save-memory-${require('node:crypto').randomUUID()}`);fs.mkdirSync(backup,{recursive:true});
-      for(const kind of [1,2,4,24,25,26,6,7,9,17]){const raw=device.readInit(kind);fs.writeFileSync(path.join(backup,`before-${kind}.bin`),raw);}
-      // The original NAVI_OFF_SAVE_CMD waits 2000 ms before queueing SAVE_END.
-      // Keep this command on the same HID session as the preceding HE write.
+      const sections=new Map();
+      for(const kind of [1,2,4,24,25,26,6,7,9,17]){const raw=device.readInit(kind);sections.set(kind,raw);fs.writeFileSync(path.join(backup,`before-${kind}.bin`),raw);}
+      return {backup,sections,exchange:[]};
+  }
+  saveToDeviceMemory(activeDevice = null, prepared = null) {
+    const save = device => {
+      const {backup,sections,exchange}=prepared??this.prepareDeviceMemorySave(device);
       waitMilliseconds(this.saveDelayMs);
-      const payload=Buffer.alloc(20);payload.set([8,0xf2]);device.send(payload);fs.writeFileSync(path.join(backup,'save-command.bin'),payload);
-      // Let the firmware finish its non-volatile write before the HID handle
-      // is closed or the user removes USB power.
-      waitMilliseconds(this.saveSettleMs);
-      return {verified:true,acknowledged:true,backup,command:'SAVE_END',persistence:'Pending power-cycle verification'};
+      try{
+        const result=require('./device-memory').saveDeviceMemory(device,sections,{requireCrc:!!prepared,trace:frame=>exchange.push(frame)});
+        waitMilliseconds(this.saveSettleMs);
+        return {...result,backup};
+      }finally{
+        fs.writeFileSync(path.join(backup,'exchange.json'),JSON.stringify(exchange,null,2));
+      }
     };
     return activeDevice ? save(activeDevice) : this.transaction(save);
   }
   persistHeChange(operation) {
     return this.transaction(device => {
-      const result=operation(device);
-      const persistence=this.saveToDeviceMemory(device);
-      return {...result,persistence};
+      // INIT reads can consume the CRC request queued by a write. Back up
+      // before changing anything; finish saving before verification reads.
+      const prepared=this.prepareDeviceMemorySave(device);
+      let persistence=null;
+      device.saveHeBatch=(layer,keys)=>{
+        const raw=Buffer.from(prepared.sections.get(25+layer));
+        for(const key of keys){
+          const offset=(key.row*COLS+key.col)*14;
+          raw[offset]=key.rtOn;
+          fields.forEach((field,i)=>raw.writeUInt16LE(key[field],offset+2+i*2));
+        }
+        prepared.sections.set(25+layer,raw);
+        persistence=this.saveToDeviceMemory(device,prepared);
+      };
+      try{
+        const result=operation(device);
+        return {...result,persistence:persistence??{acknowledged:false,unchanged:true}};
+      }finally{delete device.saveHeBatch;}
     });
   }
   calibrationState() {
@@ -238,9 +258,9 @@ class HeAdapter {
   exportHeProfile(layer) {
     return this.transaction(device=>require('./he-profile-file').exportProfile(device.readProfile(layer),layer));
   }
-  importHeProfile(layer,document) {
+  importHeProfile(layer,document,activeDevice = null) {
     const incoming=require('./he-profile-file').validateProfile(document);
-    return this.applyHePatch(layer,incoming,'import');
+    return this.applyHePatch(layer,incoming,'import',activeDevice);
   }
   applyHePatch(layer,incoming,operation='group',activeDevice = null) {
     if(![0,1].includes(layer))throw new Error('Select M1 or M2');
@@ -253,6 +273,7 @@ class HeAdapter {
       const writeBatches=keys=>{
         for(let start=0;start<keys.length;start+=4){
           const batch=keys.slice(start,start+4);for(const key of batch)device.writeKeyRaw(key,layer);
+          device.saveHeBatch?.(layer,batch);
           const observed=device.readProfile(layer);
           if(batch.some(key=>JSON.stringify(observed.keys[key.row*COLS+key.col])!==JSON.stringify(key)))throw new Error('HE batch readback mismatch');
         }
@@ -635,6 +656,7 @@ class HeAdapter {
       const backup=path.join(this.backupDir,`${Date.now()}-M${layer+1}-${physical.row}-${physical.col}.bin`);
       fs.writeFileSync(backup,before.raw,{flag:'wx'});
       device.writeKeyRaw(desired,layer);
+      device.saveHeBatch?.(layer,[desired]);
       const after=device.readProfile(layer);
       for(let i=0;i<before.keys.length;i++) {
         const expected=i===index?desired:before.keys[i];
@@ -658,6 +680,7 @@ class HeAdapter {
       const backup=path.join(this.backupDir,`${Date.now()}-M${request.layer+1}-all.bin`);
       fs.writeFileSync(backup,before.raw,{flag:'wx'});
       device.send(require('./he-protocol').encodeHeWrite(desired,request.layer,7));
+      device.saveHeBatch?.(request.layer,before.keys.map(key=>({...key,...Object.fromEntries(['rtOn',...fields].map(field=>[field,desired[field]]))})));
       const after=device.readProfile(request.layer);
       if(!after.keys.every(k=>['rtOn',...fields].every(f=>k[f]===desired[f])))
         throw new Error(`Bulk write did not verify. Original profile backup: ${backup}`);

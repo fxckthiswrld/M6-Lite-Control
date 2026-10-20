@@ -8,6 +8,7 @@ The application provides an English Wootility-style interface for Hall Effect se
 
 - Mechanical actuation and Rapid Trigger settings per switch.
 - Multi-switch Hall Effect editing, Apply to all and profile export/import.
+- RT saving completes the keyboard's CRC exchange before readback; USB power-cycle verification and evidence are recorded in [RT persistence](protocol/RT_PERSISTENCE_FIX.md).
 - Calibration readback, full-key calibration and selected-key calibration flow.
 - Remap with a full-size keyboard target layout and icon/short-label picker.
 - Media, FN/layer, HotKey, DKS and Snap Tap/SOCD programming.
