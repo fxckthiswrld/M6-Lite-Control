@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 const $ = id => document.getElementById(id);
 function updateLightingSlider(id,valueId){const input=$(id),output=$(valueId);if(input&&output){const percent=id.includes('brightness')||id==='underlight-speed';output.value=percent?`${input.value}%`:input.value;}}
 function speedToPercent(value,min,max){if(!Number.isFinite(value)||!Number.isFinite(min)||!Number.isFinite(max)||max<=min)return '';return Math.round((value-min)*100/(max-min));}
@@ -57,7 +57,7 @@ lightingPanel.insertAdjacentHTML('beforeend','<div class="lighting-section"><h3>
 lightingPanel.insertAdjacentHTML('beforeend','<div class="lighting-section"><h3>Under Light brightness</h3><label class="range-control"><input id="underlight-brightness" type="range" min="0" max="100" step="1" disabled><output id="underlight-brightness-value">—</output></label><button id="underlight-brightness-apply" disabled>Apply Under Light brightness</button></div>');
 lightingPanel.insertAdjacentHTML('beforeend','<h3>Under Light power</h3><label><input id="underlight-enabled" type="checkbox" disabled> Enable Under Light</label><button id="underlight-enabled-apply" disabled>Apply Under Light power</button>');
 lightingPanel.insertAdjacentHTML('beforeend','<h3>Under Light synchronization</h3><label><input id="underlight-sync" type="checkbox" disabled> Normal Sync</label><button id="underlight-sync-apply" disabled>Apply Normal Sync</button><p id="underlight-sync-note">Disable Normal Sync to edit independent Under Light effects.</p>');
-lightingPanel.insertAdjacentHTML('beforeend','<hr><h2>Single Light</h2><label><input id="single-active" type="checkbox" disabled> Enable Single Light layer</label><button id="single-active-apply" disabled>Apply layer</button><div class="controls"><label>Keys (click one or more to select)<select id="single-keys" multiple size="8" disabled></select></label><label><input id="single-enabled" type="checkbox" disabled> Override Back Light for selected keys</label><label>Color<input id="single-color" type="color" disabled></label></div><button id="single-read">Refresh Single Light</button><button id="single-apply" disabled>Apply to selected keys</button><p id="single-status" role="status">Read Single Light from the keyboard.</p><p>Colors override Back Light only for enabled keys while this layer is enabled. Use Save to device memory to store applied settings.</p>');
+lightingPanel.insertAdjacentHTML('beforeend','<hr><h2>Single Light</h2><label><input id="single-active" type="checkbox" disabled> Enable Single Light layer</label><button id="single-active-apply" disabled>Apply layer</button><div class="controls"><label>Keys (click one or more to select)<select id="single-keys" multiple size="8" disabled></select></label><label><input id="single-enabled" type="checkbox" disabled> Override Back Light for selected keys</label><label>Color<input id="single-color" type="color" disabled></label></div><button id="single-read">Refresh Single Light</button><button id="single-apply" disabled>Apply to selected keys</button><p id="single-status" role="status">Read Single Light from the keyboard.</p><p>Colors override Back Light only for enabled keys while this layer is enabled. Changes are saved to device memory automatically.</p>');
 $('single-apply').insertAdjacentHTML('afterend','<div class="lighting-section"><h3>Selected keys brightness</h3><label class="range-control"><input id="single-brightness" type="range" min="0" max="100" step="1" disabled><output id="single-brightness-value">—</output></label><button id="single-brightness-apply" disabled>Apply brightness to selected keys</button><p>Brightness preserves each selected key’s RGB color. Applying a color preserves its brightness.</p></div>');
 let singleState=null,singleReady=false,singleBrightnessRaw=0;
 function showSingleSelection(){
@@ -78,7 +78,7 @@ async function singleAction(kind){
  const keys=Array.from($('single-keys').selectedOptions,o=>o.value);
  const request=kind==='layer'?{active:$('single-active').checked}:kind==='brightness'?{keys,brightness:singleBrightnessRaw}:{keys,enabled:$('single-enabled').checked,color:$('single-color').value};
  setBusy(true);
- try{if(kind!=='read'){const reply=await window.keyboard.setSingleLight(request);if(!reply.ok)throw Error(reply.error);}await readSingleLight();if(kind!=='read')$('single-status').textContent='Single Light applied; device readback verified. Use Save to device memory to store it.';}
+ try{if(kind!=='read'){const reply=await window.keyboard.setSingleLight(request);if(!reply.ok)throw Error(reply.error);}await readSingleLight();if(kind!=='read')$('single-status').textContent='Single Light applied; device readback verified. Saved to device memory automatically.';}
  catch(error){singleReady=false;$('single-status').textContent=error.message;}finally{setBusy(false);}
 }
 $('single-keys').onchange=showSingleSelection;$('single-read').onclick=()=>singleAction('read');$('single-apply').onclick=()=>singleAction('keys');$('single-active-apply').onclick=()=>singleAction('layer');
@@ -136,20 +136,20 @@ function updateLightingControls(){
 $('backlight-enabled-apply').onclick=async()=>{
  if(busy||!lightingModeReady||!lightingState?.canEditEnabled)return;
  const enabled=$('backlight-enabled').checked;setBusy(true);
- try{const reply=await window.keyboard.setBackLightEnabled(enabled);if(!reply.ok)throw Error(reply.error);await readLightingMode();$('lighting-mode-status').textContent='Back Light power applied; device readback verified. Use Save to device memory to store it.';}
+ try{const reply=await window.keyboard.setBackLightEnabled(enabled);if(!reply.ok)throw Error(reply.error);await readLightingMode();$('lighting-mode-status').textContent='Back Light power applied; device readback verified. Saved to device memory automatically.';}
  catch(error){lightingModeReady=false;$('lighting-mode-status').textContent=error.message;}finally{setBusy(false);}
 };
 $('underlight-sync-apply').onclick=async()=>{
  if(busy||!underLightReady||!underLightState?.canEditSync)return;
  const sync=$('underlight-sync').checked;setBusy(true);
- try{const reply=await window.keyboard.setUnderLightSync(sync);if(!reply.ok)throw Error(reply.error);await readUnderLight();$('underlight-status').textContent='Normal Sync applied; device readback verified. Use Save to device memory to store it.';}
+ try{const reply=await window.keyboard.setUnderLightSync(sync);if(!reply.ok)throw Error(reply.error);await readUnderLight();$('underlight-status').textContent='Normal Sync applied; device readback verified. Saved to device memory automatically.';}
  catch(error){underLightReady=false;$('underlight-status').textContent=error.message;}
  finally{setBusy(false);}
 };
 $('underlight-enabled-apply').onclick=async()=>{
  if(busy||!underLightReady||!underLightState?.canEditEnabled)return;
  const enabled=$('underlight-enabled').checked;setBusy(true);
- try{const reply=await window.keyboard.setUnderLightEnabled(enabled);if(!reply.ok)throw Error(reply.error);await readUnderLight();$('underlight-status').textContent='Under Light power applied; device readback verified. Use Save to device memory to store it.';}
+ try{const reply=await window.keyboard.setUnderLightEnabled(enabled);if(!reply.ok)throw Error(reply.error);await readUnderLight();$('underlight-status').textContent='Under Light power applied; device readback verified. Saved to device memory automatically.';}
  catch(error){underLightReady=false;$('underlight-status').textContent=error.message;}
  finally{setBusy(false);}
 };
@@ -158,7 +158,7 @@ $('underlight-brightness-apply').onclick=async()=>{
  const value=Math.round($('underlight-brightness').valueAsNumber*255/100);
  if(!Number.isInteger(value)||value<0||value>255){$('underlight-status').textContent='Enter a whole number from 0 to 255.';return;}
  setBusy(true);
- try{const reply=await window.keyboard.setUnderLightBrightness(value);if(!reply.ok)throw Error(reply.error);await readUnderLight();$('underlight-status').textContent='Under Light brightness applied; device readback verified. Use Save to device memory to store it.';}
+ try{const reply=await window.keyboard.setUnderLightBrightness(value);if(!reply.ok)throw Error(reply.error);await readUnderLight();$('underlight-status').textContent='Under Light brightness applied; device readback verified. Saved to device memory automatically.';}
  catch(error){underLightReady=false;$('underlight-status').textContent=error.message;}
  finally{setBusy(false);}
 };
@@ -168,7 +168,7 @@ $('underlight-speed-apply').onclick=async()=>{
  if(!Number.isInteger(percent)||percent<0||percent>100){$('underlight-status').textContent='Choose a speed from 0 to 100%.';return;}
  const speed=percentToSpeed(percent,min,max);
  const request={mode:underLightState.mode,speed};setBusy(true);$('underlight-status').textContent='Applying Under Light speed and verifying device settings...';
- try{const reply=await window.keyboard.setUnderLightSpeed(request);if(!reply.ok)throw Error(reply.error);await readUnderLight();$('underlight-status').textContent='Under Light speed applied; configuration readback verified. Use Save to device memory to store it.';}
+ try{const reply=await window.keyboard.setUnderLightSpeed(request);if(!reply.ok)throw Error(reply.error);await readUnderLight();$('underlight-status').textContent='Under Light speed applied; configuration readback verified. Saved to device memory automatically.';}
  catch(error){underLightReady=false;$('underlight-status').textContent=error.message;}
  finally{setBusy(false);}
 };
@@ -177,7 +177,7 @@ $('underlight-color-apply').onclick=async()=>{
  if(busy||!underLightReady||!underLightState?.canEditColor||Number($('underlight-mode').value)!==underLightState.mode)return;
  const request={mode:underLightState.mode,customRgb:underLightState.supportsCustomRgb?$('underlight-custom-rgb').checked:false,color:$('underlight-color').value};setBusy(true);
  $('underlight-status').textContent='Applying Under Light color and verifying device settings...';
- try{const reply=await window.keyboard.setUnderLightColor(request);if(!reply.ok)throw Error(reply.error);await readUnderLight();$('underlight-status').textContent='Under Light color applied; configuration readback verified. Use Save to device memory to store it.';}
+ try{const reply=await window.keyboard.setUnderLightColor(request);if(!reply.ok)throw Error(reply.error);await readUnderLight();$('underlight-status').textContent='Under Light color applied; configuration readback verified. Saved to device memory automatically.';}
  catch(error){underLightReady=false;$('underlight-status').textContent=error.message;}
  finally{setBusy(false);}
 };
@@ -199,7 +199,7 @@ async function readUnderLight(){
 async function underLightAction(apply=false){
  if(busy||(apply&&!underLightReady))return;
  const mode=Number($('underlight-mode').value);setBusy(true);
- try{if(apply){const reply=await window.keyboard.setUnderLightMode(mode);if(!reply.ok)throw Error(reply.error);}await readUnderLight();if(apply)$('underlight-status').textContent='Under Light applied; configuration readback verified. Use Save to device memory to store it.';}
+ try{if(apply){const reply=await window.keyboard.setUnderLightMode(mode);if(!reply.ok)throw Error(reply.error);}await readUnderLight();if(apply)$('underlight-status').textContent='Under Light applied; configuration readback verified. Saved to device memory automatically.';}
  catch(error){underLightReady=false;$('underlight-status').textContent=error.message;}
  finally{setBusy(false);}
 }
@@ -208,7 +208,7 @@ $('lighting-direction-apply').onclick=async()=>{
  if(busy||!lightingModeReady||!lightingState?.canEditDirection||Number($('lighting-mode').value)!==lightingState.mode)return;
  const request={mode:lightingState.mode,reverse:$('lighting-reverse').checked};setBusy(true);
  $('lighting-mode-status').textContent='Applying direction and verifying device settings...';
- try{const reply=await window.keyboard.setBackLightDirection(request);if(!reply.ok)throw Error(reply.error);await readLightingMode();$('lighting-mode-status').textContent='Direction applied; configuration readback verified. Use Save to device memory to store it.';}
+ try{const reply=await window.keyboard.setBackLightDirection(request);if(!reply.ok)throw Error(reply.error);await readLightingMode();$('lighting-mode-status').textContent='Direction applied; configuration readback verified. Saved to device memory automatically.';}
  catch(error){lightingModeReady=false;$('lighting-mode-status').textContent=error.message;}
  finally{setBusy(false);}
 };
@@ -218,7 +218,7 @@ $('lighting-speed-apply').onclick=async()=>{
  const {speedMinimum:min,speedMaximum:max}=lightingState;
  if(!Number.isInteger(speed)||speed<min||speed>max){$('lighting-mode-status').textContent=`Enter a whole number from ${min} to ${max}.`;return;}
  setBusy(true);$('lighting-mode-status').textContent='Applying speed and verifying device settings...';
- try{const reply=await window.keyboard.setBackLightSpeed({mode:lightingState.mode,speed});if(!reply.ok)throw Error(reply.error);await readLightingMode();$('lighting-mode-status').textContent='Speed applied; configuration readback verified. Use Save to device memory to store it.';}
+ try{const reply=await window.keyboard.setBackLightSpeed({mode:lightingState.mode,speed});if(!reply.ok)throw Error(reply.error);await readLightingMode();$('lighting-mode-status').textContent='Speed applied; configuration readback verified. Saved to device memory automatically.';}
  catch(error){lightingModeReady=false;$('lighting-mode-status').textContent=error.message;}
  finally{setBusy(false);}
 };
@@ -227,7 +227,7 @@ $('lighting-color-apply').onclick=async()=>{
  if(busy||!lightingModeReady||!lightingState?.canEditColor||Number($('lighting-mode').value)!==lightingState.mode)return;
  const request={mode:lightingState.mode,customRgb:lightingState.supportsCustomRgb?$('lighting-custom-rgb').checked:false,color:$('lighting-color').value};setBusy(true);
  $('lighting-mode-status').textContent='Applying color and verifying device settings...';
- try{const reply=await window.keyboard.setBackLightColor(request);if(!reply.ok)throw Error(reply.error);await readLightingMode();$('lighting-mode-status').textContent='Color applied; configuration readback verified. Use Save to device memory to store it.';}
+ try{const reply=await window.keyboard.setBackLightColor(request);if(!reply.ok)throw Error(reply.error);await readLightingMode();$('lighting-mode-status').textContent='Color applied; configuration readback verified. Saved to device memory automatically.';}
  catch(error){lightingModeReady=false;$('lighting-mode-status').textContent=error.message;}
  finally{setBusy(false);}
 };
@@ -250,7 +250,7 @@ $('lighting-mode-apply').onclick=async()=>{
  if(busy||!lightingModeReady)return;
  const mode=Number($('lighting-mode').value);setBusy(true);
  $('lighting-mode-status').textContent='Applying effect and verifying device settings...';
- try{if(mode===1){await eqLighting.start();lightingModeReady=true;$('lighting-mode-current').textContent='Current effect: EQ (system audio)';$('lighting-mode-status').textContent='EQ is running. Closing the window keeps it running in the tray. Select and apply another effect to stop.';return;}await eqLighting.stop(true);const reply=await window.keyboard.setBackLightMode(mode);if(!reply.ok)throw Error(reply.error);await readLightingMode();$('lighting-mode-status').textContent='Effect applied; configuration readback verified. Use Save to device memory to store it.';}
+ try{if(mode===1){await eqLighting.start();lightingModeReady=true;$('lighting-mode-current').textContent='Current effect: EQ (system audio)';$('lighting-mode-status').textContent='EQ is running. Closing the window keeps it running in the tray. Select and apply another effect to stop.';return;}await eqLighting.stop(true);const reply=await window.keyboard.setBackLightMode(mode);if(!reply.ok)throw Error(reply.error);await readLightingMode();$('lighting-mode-status').textContent='Effect applied; configuration readback verified. Saved to device memory automatically.';}
  catch(error){lightingModeReady=true;$('lighting-mode-status').textContent=error.message;}
  finally{setBusy(false);}
 };
@@ -280,7 +280,7 @@ $('key-enabled-apply').onclick=async()=>{
  if(busy||!programming)return;
  const request={layer,id:$('remap-source').value,enabled:$('key-enabled').checked};
  setBusy(true);$('key-enabled-apply').disabled=true;
- try{const reply=await window.keyboard.setKeyEnabled(request);if(!reply.ok)throw new Error(reply.error);programming=reply.result;showPairState();showDksState();$('key-enabled-status').textContent=(request.enabled?'Key enabled.':'Key disabled.')+' Configuration readback verified. Use Save to device memory to store it.';}
+ try{const reply=await window.keyboard.setKeyEnabled(request);if(!reply.ok)throw new Error(reply.error);programming=reply.result;showPairState();showDksState();$('key-enabled-status').textContent=(request.enabled?'Key enabled.':'Key disabled.')+' Configuration readback verified. Saved to device memory automatically.';}
  catch(e){$('key-enabled-status').textContent=e.message;}
  finally{setBusy(false);updateRemapState();}
 };
@@ -354,10 +354,11 @@ function startCalibrationPoll(){
 }
 function setCalibrationActive(value){calibrationActive=value;if(value)calibrationLiveBaseline=null;$('calibration-start').hidden=value;$('calibration-selected').hidden=value;$('calibration-finish').hidden=!value;$('calibration-cancel').hidden=!value;$('calibration-reset').disabled=value||!calibrationStateKnown;const live=$('calibration-live');if(live){live.classList.toggle('active',value);if(!value)live.textContent='';}}
 function updateSelectedCalibrationButton(){
-  const calibrationCount=calibrationSelectedIds.size||(selectedId?1:0);
+  const calibrationCount=calibrationSelectedIds.size;
   $('calibration-selected').textContent=calibrationCount>1?'Calibrate selected keys':'Calibrate selected key';
   $('calibration-selected').disabled=busy||!calibrationStateKnown||calibrationActive||!calibrationCount;
-  $('calibration-selected').title=calibrationCount>1?`Calibrate ${calibrationCount} selected switches`:(calibrationCount===1?`Calibrate ${profile?.layout.find(k=>k.id===selectedId)?.label||selectedId}`:'Select one or more switches first');
+  const calibrationId=[...calibrationSelectedIds][0];
+  $('calibration-selected').title=calibrationCount>1?`Calibrate ${calibrationCount} selected switches`:(calibrationCount===1?`Calibrate ${profile?.layout.find(k=>k.id===calibrationId)?.label||calibrationId}`:'Select one or more switches first');
   $('calibration-start').disabled=busy||!calibrationStateKnown||calibrationActive;
   $('calibration-reset').disabled=busy||!calibrationStateKnown||calibrationActive;
   $('calibration-finish').disabled=busy||!calibrationStateKnown||!calibrationActive;
@@ -369,7 +370,7 @@ async function restoreCalibrationState(){
   try{
     const reply=await window.keyboard.calibrationState();
     if(!reply.ok)throw new Error(reply.error);
-    calibrationSelectedIds=new Set(reply.result.selectedIds||(reply.result.selectedId?[reply.result.selectedId]:[]));
+    calibrationSelectedIds=reply.result.active?new Set(reply.result.selectedIds||(reply.result.selectedId?[reply.result.selectedId]:[])):new Set();
     setCalibrationActive(reply.result.active);
     calibrationStateKnown=true;
     updateSelectedCalibrationButton();
@@ -435,7 +436,7 @@ $('calibration-reset').onclick=async()=>{
   finally{setBusy(false);updateSelectedCalibrationButton();}
 };
 $('calibration-selected').onclick=async()=>{
-  const ids=[...calibrationSelectedIds];if(!ids.length&&selectedId)ids.push(selectedId);
+  const ids=[...calibrationSelectedIds];
   if(busy||!calibrationStateKnown||calibrationActive||!ids.length)return;
   const names=ids.map(id=>profile?.layout.find(k=>k.id===id)?.label||id);
   setBusy(true);$('calibration-status').textContent=`Starting calibration for ${names.join(', ')}...`;
@@ -539,7 +540,8 @@ const selectionBar=document.createElement('div');selectionBar.className='selecti
 selectionBar.innerHTML='<button id="select-multiple" class="secondary" aria-pressed="false">Select multiple</button><button id="select-all-keys" class="secondary">Select all keys</button><button id="select-one-key" class="secondary">Keep one key</button><span id="selection-summary"></span><p>Click to select a switch. Use Select multiple or Ctrl / Command + click to add switches. Apply writes only to the selected group.</p>';
 $('keyboard').before(selectionBar);
 function refreshSelection(){
-  document.querySelectorAll('.key').forEach(b=>{const selected=selectedIds.has(b.dataset.id);b.classList.toggle('chosen',selected);b.setAttribute('aria-pressed',String(selected));});
+  const selectable=document.body.dataset.page!=='home';
+  document.querySelectorAll('.key').forEach(b=>{const selected=selectable&&selectedIds.has(b.dataset.id);b.classList.toggle('chosen',selected);b.setAttribute('aria-pressed',String(selected));});
   $('selection-summary').textContent=`${selectedIds.size} switch${selectedIds.size===1?'':'es'} selected`;
   updateSelectedCalibrationButton();
   $('save').textContent=selectedIds.size>1?`Apply (${selectedIds.size} keys)`:'Apply';
@@ -665,7 +667,7 @@ function drawKeyboard() {
     button.style.width=`${key.width/680*94}%`;
     button.setAttribute('aria-label',key.label||'Space');
     button.onclick=event=>{
-      if(busy)return;
+      if(busy||document.body.dataset.page==='home')return;
       if(document.body.dataset.page==='range'||multipleSelection||event.ctrlKey||event.metaKey){
         if(selectedIds.has(key.id)){if(selectedIds.size===1)return;selectedIds.delete(key.id);if(key.id===selectedId){selectedId=[...selectedIds][0];showSelected();}}
         else selectedIds.add(key.id);
@@ -686,6 +688,7 @@ async function loadProfile(nextLayer=layer) {
     $('preset-preview').textContent=`M${layer+1}: DKS changes W, A, S and D (W/S and A/D targets, interval 20). SNAP pairs A and D and keeps W/S unchanged. DKS replaces A/D SNAP. Off disables both presets.`;
     $('preset-status').textContent='';
     programming=null;
+    if(!selectedId&&profile.layout.length){selectedId=profile.layout[0].id;selectedIds=new Set([selectedId]);}
     drawKeyboard();showSelected();
     for(const [id,fallback] of [['pair-first','2:1'],['pair-second','2:3'],['dks-source','2:1'],['dks-target','2:3']]){
       const select=$(id),previous=select.value||fallback;select.replaceChildren();
@@ -712,6 +715,7 @@ $('read').onclick=()=>{setDeviceDataStatus('Reading keyboard configuration...');
 $('save-memory').onclick=async()=>{if(busy)return;setBusy(true);const message='Saving to device memory...';$('status').textContent=message;setDeviceDataStatus(message);try{const reply=await window.keyboard.saveToDeviceMemory();if(!reply.ok)throw new Error(reply.error);const done='Save command acknowledged. Power-cycle verification is still required.';$('status').textContent=done;setDeviceDataStatus(done);}catch(e){$('status').textContent=e.message;setDeviceDataStatus(e.message);}finally{setBusy(false);}};
 async function saveChanges(all=false) {
   if(busy||!profile)return;
+  if(!selectedId||!selectedIds.size){$('status').textContent='Select a switch first.';return;}
   const request={id:selectedId,ids:[...selectedIds],layer,rtOn:$('rt').checked};
   for(const field of travelFields) {
     if(!$(field).checkValidity()){$(field).reportValidity();return;}
@@ -728,7 +732,9 @@ async function saveChanges(all=false) {
       const saved=reply.result.key;
       profile.keys[profile.keys.findIndex(k=>k.row===saved.row&&k.col===saved.col)]=saved;
     }
-    showSelected();$('status').textContent='Applied to keyboard and verified by readback.';
+    showSelected();$('status').textContent=reply.result.persistence
+      ?'Applied to keyboard, verified by readback and saved to device memory.'
+      :'Applied, saved to device memory and verified by readback.';
   } catch(error) {showSelected();$('status').textContent=error.message;}
   finally{setBusy(false);}
 }
@@ -825,7 +831,7 @@ async function applyPair(disable=false){
 }
 $('pair-apply').onclick=()=>applyPair();$('pair-disable').onclick=()=>applyPair(true);
 const settingsPanel=document.createElement('section');settingsPanel.className='panel';settingsPanel.id='settings-panel';settingsPanel.hidden=true;
-settingsPanel.innerHTML='<small>DEVICE SETTINGS</small><div class="performance-card"><div class="performance-heading"><h2 id="performance-name">Keyboard Mode</h2><label class="fps-switch"><span>FPS Enhance</span><input id="device-fps" type="checkbox" disabled></label></div><p>Switching modes reboots the keyboard.</p><div class="performance-modes" role="group" aria-label="Keyboard mode"><button type="button" data-performance-mode="0" aria-pressed="false">BeastMode</button><button type="button" data-performance-mode="1" aria-pressed="false">EyeMode</button><button type="button" data-performance-mode="2" aria-pressed="false">DevMode</button></div><div class="actions"><button id="device-mode-apply" disabled>Apply mode</button><button id="device-settings-read" class="secondary">Refresh</button></div></div><p>FPS Enhance is independent of the selected mode. It prioritizes scanning the two rows containing WASD; other rows use a lower scan rate.</p><p>Applying either setting reconnects the keyboard. Use Save to device memory to store it.</p><p id="device-settings-status" role="status"></p>';
+settingsPanel.innerHTML='<small>DEVICE SETTINGS</small><div class="performance-card"><div class="performance-heading"><h2 id="performance-name">Keyboard Mode</h2><label class="fps-switch"><span>FPS Enhance</span><input id="device-fps" type="checkbox" disabled></label></div><p>Switching modes reboots the keyboard.</p><div class="performance-modes" role="group" aria-label="Keyboard mode"><button type="button" data-performance-mode="0" aria-pressed="false">BeastMode</button><button type="button" data-performance-mode="1" aria-pressed="false">EyeMode</button><button type="button" data-performance-mode="2" aria-pressed="false">DevMode</button></div><div class="actions"><button id="device-mode-apply" disabled>Apply mode</button><button id="device-settings-read" class="secondary">Refresh</button></div></div><p>FPS Enhance is independent of the selected mode. It prioritizes scanning the two rows containing WASD; other rows use a lower scan rate.</p><p>Applying either setting reconnects the keyboard. Saved to device memory automatically.</p><p id="device-settings-status" role="status"></p>';
 remapPanel.after(settingsPanel);let deviceSettings=null,performanceDraft=null;
 settingsPanel.insertAdjacentHTML('beforeend',`
  <div class="device-options-grid">
@@ -885,7 +891,7 @@ for(const [id,name] of [['highlight','highlight'],['auto-calibration','autoCalib
 settingsPanel.querySelectorAll('.device-option input').forEach(input=>input.addEventListener('input',()=>{
  $('device-auto-light-off-value').value=$('device-auto-light-off-minutes').value+' min';
  for(const i of [0,1,2])$('device-saturation-value-'+i).value=$('device-saturation-'+i).value;
- updateSettingControls();$('device-settings-status').textContent='Unapplied changes. Choose Apply for the setting you edited.';
+ updateSettingControls();$('device-settings-status').textContent='Saving to device memory automatically.';
 }));
 function showPerformanceMode(){
  performanceDraft=deviceSettings?.canEditPerformance?deviceSettings.performanceMode:null;
@@ -896,7 +902,7 @@ for(const button of settingsPanel.querySelectorAll('[data-performance-mode]'))bu
  if(busy||!deviceSettings?.canEditPerformance)return;
  performanceDraft=Number(button.dataset.performanceMode);
  for(const item of settingsPanel.querySelectorAll('[data-performance-mode]'))item.setAttribute('aria-pressed',String(item===button));
- $('device-settings-status').textContent=['BeastMode','EyeMode','DevMode'][performanceDraft]+' selected. Choose Apply mode to write it to the keyboard.';
+ $('device-settings-status').textContent=['BeastMode','EyeMode','DevMode'][performanceDraft]+' selected. Applying to the keyboard...';
 };
 async function deviceSettingsAction(apply=false){
  const action=settingActions[apply];
@@ -950,3 +956,66 @@ calibrationNav.onclick=()=>{
 setBusy(false);Promise.all([restoreCalibrationState(),loadProfile()]).then(()=>eqLighting.resume()).catch(error=>{$("lighting-mode-status").textContent=error.message;});
 
 
+
+// Automatic apply: every edited control writes, verifies and persists without a separate Apply button.
+function hideAutoControls(ids){
+  for(const id of ids){
+    const element=$(id);
+    if(!element)continue;
+    element.hidden=true;
+    element.style.display='none';
+  }
+}
+function autoApply(action,delay=250){
+  let timer=null;
+  const run=async()=>{
+    if(busy){timer=setTimeout(run,150);return;}
+    try{await action();}catch(error){}
+  };
+  return ()=>{clearTimeout(timer);timer=setTimeout(run,delay);};
+}
+hideAutoControls([
+  'read','save-memory','save','apply',
+  'lighting-read','lighting-apply','lighting-mode-apply','lighting-color-apply','lighting-speed-apply','lighting-direction-apply',
+  'backlight-enabled-apply','underlight-read','underlight-apply','underlight-color-apply','underlight-speed-apply','underlight-brightness-apply','underlight-enabled-apply','underlight-sync-apply',
+  'single-read','single-apply','single-active-apply','single-brightness-apply',
+  'remap-apply','layer-apply','media-apply','modify-apply','hotkey-apply','dks-apply','pair-apply','key-enabled-apply',
+  'device-mode-apply','device-settings-read','device-highlight-apply','device-auto-calibration-apply','device-auto-light-off-apply','device-saturation-apply',
+  'calibration-read'
+]);
+const autoHe=autoApply(()=>saveChanges(),350);
+for(const field of travelFields)$(field).addEventListener('change',autoHe);
+$('mode-mechanical').addEventListener('click',autoApply(()=>saveChanges(),80));
+$('mode-rt').addEventListener('click',autoApply(()=>saveChanges(),80));
+$('lighting-brightness').addEventListener('change',autoApply(()=>$('lighting-apply').click(),250));
+$('lighting-mode').addEventListener('change',autoApply(()=>$('lighting-mode-apply').click(),80));
+$('lighting-color').addEventListener('change',autoApply(()=>$('lighting-color-apply').click(),250));
+$('lighting-custom-rgb').addEventListener('change',autoApply(()=>$('lighting-color-apply').click(),80));
+$('lighting-speed').addEventListener('change',autoApply(()=>$('lighting-speed-apply').click(),250));
+$('lighting-reverse').addEventListener('change',autoApply(()=>$('lighting-direction-apply').click(),80));
+$('underlight-mode').addEventListener('change',autoApply(()=>$('underlight-apply').click(),80));
+$('underlight-color').addEventListener('change',autoApply(()=>$('underlight-color-apply').click(),250));
+$('underlight-custom-rgb').addEventListener('change',autoApply(()=>$('underlight-color-apply').click(),80));
+$('underlight-speed').addEventListener('change',autoApply(()=>$('underlight-speed-apply').click(),250));
+$('underlight-brightness').addEventListener('change',autoApply(()=>$('underlight-brightness-apply').click(),250));
+$('underlight-enabled').addEventListener('change',autoApply(()=>$('underlight-enabled-apply').click(),80));
+$('single-active').addEventListener('change',autoApply(()=>$('single-active-apply').click(),80));
+$('single-color').addEventListener('change',autoApply(()=>$('single-apply').click(),250));
+$('single-enabled').addEventListener('change',autoApply(()=>$('single-apply').click(),80));
+$('single-brightness').addEventListener('change',autoApply(()=>$('single-brightness-apply').click(),250));
+$('remap-target').addEventListener('change',autoApply(()=>$('remap-apply').click(),80));
+$('layer-target').addEventListener('change',autoApply(()=>$('layer-apply').click(),80));
+$('media-action').addEventListener('change',autoApply(()=>$('media-apply').click(),80));
+$('hotkey-interval').addEventListener('change',autoApply(()=>$('hotkey-apply').click(),250));
+$('dks-target').addEventListener('change',autoApply(()=>$('dks-apply').click(),80));
+$('dks-interval').addEventListener('change',autoApply(()=>$('dks-apply').click(),250));
+for(const id of ['modify-type','modify-button','modify-x','modify-y','modify-wheel','modify-mode','modify-interval'])$(id).addEventListener('change',autoApply(()=>$('modify-apply').click(),250));
+$('key-enabled').addEventListener('change',autoApply(()=>$('key-enabled-apply').click(),80));
+$('pair-mode').addEventListener('change',autoApply(()=>$('pair-apply').click(),80));
+for(const button of document.querySelectorAll('[data-pair-mode]'))button.addEventListener('click',autoApply(()=>$('pair-apply').click(),80));
+for(const button of settingsPanel.querySelectorAll('[data-performance-mode]'))button.addEventListener('click',autoApply(()=>deviceSettingsAction('mode'),80));
+$('device-highlight').addEventListener('change',autoApply(()=>deviceSettingsAction('highlight'),80));
+$('device-auto-calibration').addEventListener('change',autoApply(()=>deviceSettingsAction('autoCalibration'),80));
+$('device-auto-light-off').addEventListener('change',autoApply(()=>deviceSettingsAction('autoLightOff'),80));
+$('device-auto-light-off-minutes').addEventListener('change',autoApply(()=>deviceSettingsAction('autoLightOff'),250));
+for(const i of [0,1,2])$('device-saturation-'+i).addEventListener('change',autoApply(()=>deviceSettingsAction('saturation'),250));

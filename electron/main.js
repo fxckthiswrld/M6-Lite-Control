@@ -22,6 +22,13 @@ async function usbOrError(action, fallback, {exclusive=false}={}) {
   catch (error) { return { ok: false, error: error.message, local: fallback }; }
   finally { usbOperations--;if(exclusive)deviceSettingsBusy=false; }
 }
+async function usbWrite(action, fallback, options) {
+  return usbOrError(async () => {
+    const result = await action();
+    const persistence = await heAdapter.saveToDeviceMemory();
+    return result && typeof result === 'object' && !Array.isArray(result) ? { ...result, persistence } : result;
+  }, fallback, options);
+}
 
 function createWindow() {
   Menu.setApplicationMenu(null);
@@ -35,24 +42,24 @@ function createWindow() {
 
 ipcMain.handle('keyboard:save-memory', async () => usbOrError(() => heAdapter.saveToDeviceMemory(), null));
 ipcMain.handle('keyboard:read-device-settings', async()=>usbOrError(()=>heAdapter.transaction(d=>require('./device-settings').readSettings(d.readInit(1),d.readInit(17))),null));
-ipcMain.handle('keyboard:set-fps-enhance', async(_event,enabled)=>usbOrError(()=>require('./device-settings').applyFps(heAdapter,heAdapter.backupDir,enabled),null,{exclusive:true}));
+ipcMain.handle('keyboard:set-fps-enhance', async(_event,enabled)=>usbWrite(()=>require('./device-settings').applyFps(heAdapter,heAdapter.backupDir,enabled),null,{exclusive:true}));
 ipcMain.handle('keyboard:set-performance-mode', async(_event,mode)=>usbOrError(()=>require('./device-settings').applyPerformanceMode(heAdapter,heAdapter.backupDir,mode),null,{exclusive:true}));
 for(const [channel,method] of [['auto-calibration','applyAutoCalibration'],['auto-light-off','applyAutoLightOff'],['highlight','applyHighlight'],['saturation','applySaturation']]){
- ipcMain.handle('keyboard:set-'+channel,async(_event,value)=>usbOrError(()=>require('./device-settings')[method](heAdapter,heAdapter.backupDir,value),null,{exclusive:true}));
+ ipcMain.handle('keyboard:set-'+channel,async(_event,value)=>usbWrite(()=>require('./device-settings')[method](heAdapter,heAdapter.backupDir,value),null,{exclusive:true}));
 }
 ipcMain.handle('keyboard:read-brightness', async () => usbOrError(() => heAdapter.readBrightness(), null));
-ipcMain.handle('keyboard:set-brightness', async (_event,value) => usbOrError(() => heAdapter.setBrightness(value), null));
-ipcMain.handle('keyboard:set-underlight-brightness', async (_event,value) => usbOrError(() => heAdapter.setUnderLightBrightness(value), null));
-ipcMain.handle('keyboard:set-backlight-enabled', async (_event,value) => usbOrError(() => heAdapter.setBackLightEnabled(value), null));
+ipcMain.handle('keyboard:set-brightness', async (_event,value) => usbWrite(() => heAdapter.setBrightness(value), null));
+ipcMain.handle('keyboard:set-underlight-brightness', async (_event,value) => usbWrite(() => heAdapter.setUnderLightBrightness(value), null));
+ipcMain.handle('keyboard:set-backlight-enabled', async (_event,value) => usbWrite(() => heAdapter.setBackLightEnabled(value), null));
 ipcMain.handle('keyboard:read-backlight', async () => usbOrError(() => heAdapter.readBackLight(), null));
 ipcMain.handle('keyboard:read-underlight', async () => usbOrError(() => heAdapter.readUnderLight(), null));
-ipcMain.handle('keyboard:set-underlight-mode', async (_event,value) => usbOrError(() => heAdapter.setUnderLightMode(value), null));
-ipcMain.handle('keyboard:set-underlight-color', async (_event,value) => usbOrError(() => heAdapter.setUnderLightColor(value), null));
-ipcMain.handle('keyboard:set-underlight-speed', async (_event,value) => usbOrError(() => heAdapter.setUnderLightSpeed(value), null));
-ipcMain.handle('keyboard:set-backlight-mode', async (_event,value) => usbOrError(() => heAdapter.setBackLightMode(value), null));
-ipcMain.handle('keyboard:set-backlight-color', async (_event,value) => usbOrError(() => heAdapter.setBackLightColor(value), null));
-ipcMain.handle('keyboard:set-backlight-speed', async (_event,value) => usbOrError(() => heAdapter.setBackLightSpeed(value), null));
-ipcMain.handle('keyboard:set-backlight-direction', async (_event,value) => usbOrError(() => heAdapter.setBackLightDirection(value), null));
+ipcMain.handle('keyboard:set-underlight-mode', async (_event,value) => usbWrite(() => heAdapter.setUnderLightMode(value), null));
+ipcMain.handle('keyboard:set-underlight-color', async (_event,value) => usbWrite(() => heAdapter.setUnderLightColor(value), null));
+ipcMain.handle('keyboard:set-underlight-speed', async (_event,value) => usbWrite(() => heAdapter.setUnderLightSpeed(value), null));
+ipcMain.handle('keyboard:set-backlight-mode', async (_event,value) => usbWrite(() => heAdapter.setBackLightMode(value), null));
+ipcMain.handle('keyboard:set-backlight-color', async (_event,value) => usbWrite(() => heAdapter.setBackLightColor(value), null));
+ipcMain.handle('keyboard:set-backlight-speed', async (_event,value) => usbWrite(() => heAdapter.setBackLightSpeed(value), null));
+ipcMain.handle('keyboard:set-backlight-direction', async (_event,value) => usbWrite(() => heAdapter.setBackLightDirection(value), null));
 ipcMain.handle('keyboard:read-calibration', async () => usbOrError(() => heAdapter.readCalibration(), null));
 ipcMain.handle('keyboard:calibration-state', async () => usbOrError(() => heAdapter.calibrationState(), null));
 ipcMain.handle('keyboard:calibration-command', async (_event, command) => usbOrError(() => heAdapter.calibrationCommand(command), null));
@@ -67,7 +74,7 @@ ipcMain.handle('keyboard:export-he', async (event,layer)=>usbOrError(async()=>{
   const document=heAdapter.exportHeProfile(layer);
   fs.writeFileSync(selected.filePath,JSON.stringify(document,null,2)+'\n','utf8');return {path:selected.filePath};
 },null));
-ipcMain.handle('keyboard:import-he', async (event,layer)=>usbOrError(async()=>{
+ipcMain.handle('keyboard:import-he', async (event,layer)=>usbWrite(async()=>{
   if(![0,1].includes(layer))throw new Error('Select M1 or M2');
   const selected=await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender),{title:`Import HE into M${layer+1}`,properties:['openFile'],filters:[{name:'HE profile JSON',extensions:['json']}]});
   if(selected.canceled)return {canceled:true};
@@ -75,19 +82,19 @@ ipcMain.handle('keyboard:import-he', async (event,layer)=>usbOrError(async()=>{
   return heAdapter.importHeProfile(layer,JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,'')));
 },null));
 ipcMain.handle('keyboard:read-programming', async (_event, layer) => usbOrError(() => heAdapter.readProgramming(layer), null));
-ipcMain.handle('keyboard:set-pair', async (_event, request) => usbOrError(() => heAdapter.setPair(request), null));
-ipcMain.handle('keyboard:set-remap', async (_event, request) => usbOrError(() => heAdapter.setRemap(request), null));
-ipcMain.handle('keyboard:set-hotkey', async (_event, request) => usbOrError(() => heAdapter.setHotKey(request), null));
-ipcMain.handle('keyboard:set-media', async (_event, request) => usbOrError(() => heAdapter.setMedia(request), null));
-ipcMain.handle('keyboard:set-modify', async (_event, request) => usbOrError(() => heAdapter.setModify(request), null));
-ipcMain.handle('keyboard:set-layer-assignment', async (_event, request) => usbOrError(() => heAdapter.setLayerAssignment(request), null));
-ipcMain.handle('keyboard:reset-programming-key', async (_event, request) => usbOrError(() => heAdapter.resetProgrammingKey(request), null));
-ipcMain.handle('keyboard:set-key-enabled', async (_event, request) => usbOrError(() => heAdapter.setKeyEnabled(request), null));
-ipcMain.handle('keyboard:set-dks', async (_event, request) => usbOrError(() => heAdapter.setDks(request), null));
-ipcMain.handle('keyboard:set-dks-all', async (_event, request) => usbOrError(() => heAdapter.setDksAll(request), null));
-ipcMain.handle('keyboard:set-dks-wasd', async (_event, request) => usbOrError(() => heAdapter.setDksWasd(request), null));
-ipcMain.handle('keyboard:preset-off', async (_event, request) => usbOrError(() => heAdapter.presetOff(request), null));
-ipcMain.handle('keyboard:quick-preset', async (_event, request) => usbOrError(() => heAdapter.setQuickPreset(request), null));
+ipcMain.handle('keyboard:set-pair', async (_event, request) => usbWrite(() => heAdapter.setPair(request), null));
+ipcMain.handle('keyboard:set-remap', async (_event, request) => usbWrite(() => heAdapter.setRemap(request), null));
+ipcMain.handle('keyboard:set-hotkey', async (_event, request) => usbWrite(() => heAdapter.setHotKey(request), null));
+ipcMain.handle('keyboard:set-media', async (_event, request) => usbWrite(() => heAdapter.setMedia(request), null));
+ipcMain.handle('keyboard:set-modify', async (_event, request) => usbWrite(() => heAdapter.setModify(request), null));
+ipcMain.handle('keyboard:set-layer-assignment', async (_event, request) => usbWrite(() => heAdapter.setLayerAssignment(request), null));
+ipcMain.handle('keyboard:reset-programming-key', async (_event, request) => usbWrite(() => heAdapter.resetProgrammingKey(request), null));
+ipcMain.handle('keyboard:set-key-enabled', async (_event, request) => usbWrite(() => heAdapter.setKeyEnabled(request), null));
+ipcMain.handle('keyboard:set-dks', async (_event, request) => usbWrite(() => heAdapter.setDks(request), null));
+ipcMain.handle('keyboard:set-dks-all', async (_event, request) => usbWrite(() => heAdapter.setDksAll(request), null));
+ipcMain.handle('keyboard:set-dks-wasd', async (_event, request) => usbWrite(() => heAdapter.setDksWasd(request), null));
+ipcMain.handle('keyboard:preset-off', async (_event, request) => usbWrite(() => heAdapter.presetOff(request), null));
+ipcMain.handle('keyboard:quick-preset', async (_event, request) => usbWrite(() => heAdapter.setQuickPreset(request), null));
 ipcMain.handle('keyboard:save-selected', async (_event, key) => usbOrError(() => transport.saveSelectedKey(key), null));
 ipcMain.handle('keyboard:apply-all', async (_event, settings) => usbOrError(() => transport.applyToAll(settings), null));
 ipcMain.handle('keyboard:restart', async () => usbOrError(() => transport.restart(), null));
@@ -105,13 +112,13 @@ ipcMain.handle('hardware:read-status', async () => hardware.readStatus());
 app.whenReady().then(createWindow);
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
-ipcMain.handle('keyboard:return-standard', async (_event, request) => usbOrError(() => heAdapter.returnToStandard(request), null));
+ipcMain.handle('keyboard:return-standard', async (_event, request) => usbWrite(() => heAdapter.returnToStandard(request), null));
 
-ipcMain.handle('keyboard:set-underlight-enabled', async (_event,value) => usbOrError(() => heAdapter.setUnderLightEnabled(value), null));
+ipcMain.handle('keyboard:set-underlight-enabled', async (_event,value) => usbWrite(() => heAdapter.setUnderLightEnabled(value), null));
 
-ipcMain.handle('keyboard:set-underlight-sync', async (_event,value) => usbOrError(() => heAdapter.setUnderLightSync(value), null));
+ipcMain.handle('keyboard:set-underlight-sync', async (_event,value) => usbWrite(() => heAdapter.setUnderLightSync(value), null));
 
 ipcMain.handle('keyboard:read-single-light', async () => usbOrError(() => heAdapter.readSingleLight(), null));
-ipcMain.handle('keyboard:set-single-light', async (_event,value) => usbOrError(() => heAdapter.setSingleLight(value), null));
+ipcMain.handle('keyboard:set-single-light', async (_event,value) => usbWrite(() => heAdapter.setSingleLight(value), null));
 
 }
