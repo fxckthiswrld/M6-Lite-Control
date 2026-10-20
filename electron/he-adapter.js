@@ -58,6 +58,8 @@ class HeAdapter {
       fs.mkdirSync(this.backupDir,{recursive:true});
       const backup=path.join(this.backupDir,`save-memory-${require('node:crypto').randomUUID()}`);fs.mkdirSync(backup,{recursive:true});
       for(const kind of [1,2,4,24,25,26,6,7,9,17]){const raw=device.readInit(kind);fs.writeFileSync(path.join(backup,`before-${kind}.bin`),raw);}
+      // SAVE_END is the confirmed persistent-memory command. 0xFE is accepted
+      // by the HID endpoint but does not commit Hall Effect values across a reconnect.
       const payload=Buffer.alloc(20);payload.set([8,0xf2]);device.send(payload);fs.writeFileSync(path.join(backup,'save-command.bin'),payload);
       return {verified:true,acknowledged:true,backup,command:'SAVE_END',persistence:'Pending power-cycle verification'};
     });
