@@ -24,9 +24,10 @@ function displayKey(key) {
   return {...key, rtOn: !!key.rtOn, ...Object.fromEntries(fields.map(f=>[f,key[f]/500]))};
 }
 class HeAdapter {
-  constructor(backupDir,{saveDelayMs=2000}={}) {
+  constructor(backupDir,{saveDelayMs=2000,saveSettleMs=1000}={}) {
     this.backupDir=backupDir;
     this.saveDelayMs=saveDelayMs;
+    this.saveSettleMs=saveSettleMs;
     this.calibrationLive=new Map();
     this.calibrationLiveUpdatedAt=null;
     this.calibrationTelemetryHandle=null;
@@ -67,6 +68,9 @@ class HeAdapter {
       // Keep this command on the same HID session as the preceding HE write.
       waitMilliseconds(this.saveDelayMs);
       const payload=Buffer.alloc(20);payload.set([8,0xf2]);device.send(payload);fs.writeFileSync(path.join(backup,'save-command.bin'),payload);
+      // Let the firmware finish its non-volatile write before the HID handle
+      // is closed or the user removes USB power.
+      waitMilliseconds(this.saveSettleMs);
       return {verified:true,acknowledged:true,backup,command:'SAVE_END',persistence:'Pending power-cycle verification'};
     };
     return activeDevice ? save(activeDevice) : this.transaction(save);
