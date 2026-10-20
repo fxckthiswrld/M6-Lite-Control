@@ -25,3 +25,25 @@ test('failed memory commit reports that the HE change was not persisted', async 
 
   await assert.rejects(transport.saveSelectedKey({}), /not saved to device memory: keyboard disconnected/);
 });
+
+test('adapter persistence keeps grouped HE write and SAVE_END on one device session', async () => {
+  const calls = [];
+  const device = { session: 1 };
+  const transport = new M6UPTransport({
+    persistHeChange: operation => {
+      calls.push(['begin', device]);
+      const result = operation(device);
+      calls.push(['save-end', device]);
+      return result;
+    },
+    writeSelectedKey: (request, activeDevice) => {
+      calls.push(['write', request, activeDevice]);
+      return { verified: true };
+    },
+  });
+
+  await transport.saveSelectedKey({ id: '0:0', ids: ['0:0', '0:1'] });
+  assert.equal(calls[1][0], 'write');
+  assert.strictEqual(calls[1][2], device);
+  assert.strictEqual(calls[2][1], device);
+});

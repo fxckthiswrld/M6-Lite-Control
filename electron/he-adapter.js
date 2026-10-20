@@ -58,16 +58,24 @@ class HeAdapter {
     fs.writeFileSync(temporary,JSON.stringify(saved,null,2),{flag:'wx'});
     fs.renameSync(temporary,journal);
   }
-  saveToDeviceMemory() {
-    return this.transaction(device=>{
+  saveToDeviceMemory(activeDevice = null) {
+    const save = device => {
       fs.mkdirSync(this.backupDir,{recursive:true});
       const backup=path.join(this.backupDir,`save-memory-${require('node:crypto').randomUUID()}`);fs.mkdirSync(backup,{recursive:true});
       for(const kind of [1,2,4,24,25,26,6,7,9,17]){const raw=device.readInit(kind);fs.writeFileSync(path.join(backup,`before-${kind}.bin`),raw);}
       // The original NAVI_OFF_SAVE_CMD waits 2000 ms before queueing SAVE_END.
-      // Sending 08 F2 immediately can acknowledge while leaving values volatile.
+      // Keep this command on the same HID session as the preceding HE write.
       waitMilliseconds(this.saveDelayMs);
       const payload=Buffer.alloc(20);payload.set([8,0xf2]);device.send(payload);fs.writeFileSync(path.join(backup,'save-command.bin'),payload);
       return {verified:true,acknowledged:true,backup,command:'SAVE_END',persistence:'Pending power-cycle verification'};
+    };
+    return activeDevice ? save(activeDevice) : this.transaction(save);
+  }
+  persistHeChange(operation) {
+    return this.transaction(device => {
+      const result=operation(device);
+      const persistence=this.saveToDeviceMemory(device);
+      return {...result,persistence};
     });
   }
   calibrationState() {
@@ -230,9 +238,9 @@ class HeAdapter {
     const incoming=require('./he-profile-file').validateProfile(document);
     return this.applyHePatch(layer,incoming,'import');
   }
-  applyHePatch(layer,incoming,operation='group') {
+  applyHePatch(layer,incoming,operation='group',activeDevice = null) {
     if(![0,1].includes(layer))throw new Error('Select M1 or M2');
-    return this.transaction(device=>device.withLayer('he',layer,()=>{
+    const run = device=>device.withLayer('he',layer,()=>{
       const before=device.readProfile(layer),expected=before.keys.map(key=>({...key}));
       for(const key of incoming)Object.assign(expected[key.row*COLS+key.col],key);
       const changes=expected.filter((key,i)=>JSON.stringify(key)!==JSON.stringify(before.keys[i]));
@@ -257,7 +265,8 @@ class HeAdapter {
         }catch(restoreError){throw new Error(`${error.message}. Restoration failed: ${restoreError.message}. Backup: ${backup}`);}
         throw new Error(`${error.message}. Original HE profile restored. Backup: ${backup}`);
       }
-    }));
+    });
+    return activeDevice ? run(activeDevice) : this.transaction(run);
   }
   setPair(request) {
     const {layer,mode,first,second}=request;
@@ -598,20 +607,20 @@ class HeAdapter {
       }
     }));
   }
-  writeSelectedKeys(request) {
+  writeSelectedKeys(request, activeDevice = null) {
     if(!Array.isArray(request.ids)||!request.ids.length||request.ids.length>layout.length||new Set(request.ids).size!==request.ids.length)throw new Error('Select unique physical switches');
     if(typeof request.rtOn!=='boolean')throw new Error('Select Mechanical or RT');
     const activeFields=request.rtOn?['head','bottom','trigger','release']:['fixedDown','fixedUp'];
     const values=Object.fromEntries(activeFields.map(field=>[field,millimetresToRaw(request[field])]));
     const patches=request.ids.map(id=>{const physical=layout.find(k=>k.id===id);if(!physical)throw new Error('Unknown physical switch');return {row:physical.row,col:physical.col,rtOn:Number(request.rtOn),...values};});
-    return this.applyHePatch(request.layer,patches);
+    return this.applyHePatch(request.layer,patches,'group',activeDevice);
   }
-  writeSelectedKey(request) {
-    if(request.ids?.length>1)return this.writeSelectedKeys(request);
+  writeSelectedKey(request, activeDevice = null) {
+    if(request.ids?.length>1)return this.writeSelectedKeys(request,activeDevice);
     const physical=layout.find(k=>k.id===request.id);
     if(!physical) throw new Error('Select a key from the verified keyboard layout');
     const layer=request.layer;
-    return this.transaction(device=>device.withLayer('he',layer,()=>{
+    const run = device=>device.withLayer('he',layer,()=>{
       const before=device.readProfile(layer);
       const index=physical.row*COLS+physical.col;
       const desired={...before.keys[index]};
@@ -629,12 +638,13 @@ class HeAdapter {
           throw new Error(`Device readback differs at ${after.keys[i].row}:${after.keys[i].col}. Backup: ${backup}`);
       }
       return {verified:true,layer,key:displayKey(after.keys[index]),backup,persistence:'Live device readback verified; power-cycle persistence not yet verified'};
-    }));
+    });
+    return activeDevice ? run(activeDevice) : this.transaction(run);
   }
-  applyToAll(request) {
+  applyToAll(request, activeDevice = null) {
     const physical=layout.find(k=>k.id===request.id);
     if(!physical) throw new Error('Select a key from the verified keyboard layout');
-    return this.transaction(device=>device.withLayer('he',request.layer,()=>{
+    const run = device=>device.withLayer('he',request.layer,()=>{
       const before=device.readProfile(request.layer);
       const desired={...before.keys[physical.row*COLS+physical.col]};
       for(const field of fields) desired[field]=millimetresToRaw(request[field]);
@@ -648,7 +658,8 @@ class HeAdapter {
       if(!after.keys.every(k=>['rtOn',...fields].every(f=>k[f]===desired[f])))
         throw new Error(`Bulk write did not verify. Original profile backup: ${backup}`);
       return {verified:true,layer:request.layer,keys:after.keys.map(displayKey),layout,backup};
-    }));
+    });
+    return activeDevice ? run(activeDevice) : this.transaction(run);
   }
   calibrate() { throw new Error('Calibration sequence is being recovered'); }
   restart() { throw new Error('Restart sequence is being recovered'); }

@@ -4,6 +4,8 @@
 class M6UPTransport {
   constructor(adapter) { this.adapter = adapter; }
   async persistHeChange(operation) {
+    if (typeof this.adapter.persistHeChange === 'function')
+      return this.adapter.persistHeChange(operation);
     try {
       const result = await operation();
       const persistence = await this.adapter.saveToDeviceMemory();
@@ -12,8 +14,8 @@ class M6UPTransport {
       throw new Error(`Hall Effect change was not saved to device memory: ${error.message}`);
     }
   }
-  async saveSelectedKey(key) { return this.persistHeChange(() => this.adapter.writeSelectedKey(key)); }
-  async applyToAll(settings) { return this.persistHeChange(() => this.adapter.applyToAll(settings)); }
+  async saveSelectedKey(key) { return this.persistHeChange(device => this.adapter.writeSelectedKey(key, device)); }
+  async applyToAll(settings) { return this.persistHeChange(device => this.adapter.applyToAll(settings, device)); }
   async calibrate() { return this.adapter.calibrate(); }
   async restart() { return this.adapter.restart(); }
   async programming(config) { return this.adapter.programming(config); }
