@@ -16,12 +16,17 @@ function millimetresToRaw(value) {
   return Math.round(raw);
 }
 function byteRange(value,name){if(!Number.isInteger(value)||value<0||value>255)throw new RangeError(`Invalid ${name}`);}
+function waitMilliseconds(milliseconds){
+  if(milliseconds<=0)return;
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,milliseconds);
+}
 function displayKey(key) {
   return {...key, rtOn: !!key.rtOn, ...Object.fromEntries(fields.map(f=>[f,key[f]/500]))};
 }
 class HeAdapter {
-  constructor(backupDir) {
+  constructor(backupDir,{saveDelayMs=2000}={}) {
     this.backupDir=backupDir;
+    this.saveDelayMs=saveDelayMs;
     this.calibrationLive=new Map();
     this.calibrationLiveUpdatedAt=null;
     this.calibrationTelemetryHandle=null;
@@ -58,8 +63,9 @@ class HeAdapter {
       fs.mkdirSync(this.backupDir,{recursive:true});
       const backup=path.join(this.backupDir,`save-memory-${require('node:crypto').randomUUID()}`);fs.mkdirSync(backup,{recursive:true});
       for(const kind of [1,2,4,24,25,26,6,7,9,17]){const raw=device.readInit(kind);fs.writeFileSync(path.join(backup,`before-${kind}.bin`),raw);}
-      // SAVE_END is the confirmed persistent-memory command. 0xFE is accepted
-      // by the HID endpoint but does not commit Hall Effect values across a reconnect.
+      // The original NAVI_OFF_SAVE_CMD waits 2000 ms before queueing SAVE_END.
+      // Sending 08 F2 immediately can acknowledge while leaving values volatile.
+      waitMilliseconds(this.saveDelayMs);
       const payload=Buffer.alloc(20);payload.set([8,0xf2]);device.send(payload);fs.writeFileSync(path.join(backup,'save-command.bin'),payload);
       return {verified:true,acknowledged:true,backup,command:'SAVE_END',persistence:'Pending power-cycle verification'};
     });
