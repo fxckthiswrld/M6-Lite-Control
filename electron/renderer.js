@@ -38,7 +38,7 @@ $('dks-all-confirm').onclick=async()=>{
 };
 document.querySelector('header').after(presetPanel);
 presetPanel.insertAdjacentHTML('afterbegin','<small>QUICK PRESETS</small><h2>DKS / SNAP</h2><p id="preset-preview"></p><div class="actions"><button id="dks-wasd">DKS - WASD</button><button id="dks-wasd-disable" class="secondary">Disable WASD DKS</button><button id="snap-ad">SNAP - A / D</button><button id="snap-ad-disable" class="secondary">Disable A / D SNAP</button><button id="preset-off" disabled title="Disable quick presets in the current profile">Off</button></div><p id="preset-status" role="status" aria-live="polite"></p><hr>');
-advancedPanel.insertAdjacentHTML('beforeend','<hr><h2>HotKey</h2><p>Repeat one standard key at a controlled interval. The source must be in Standard mode.</p><div class="controls"><label>Source switch<select id="hotkey-source"></select></label><label>Interval<input id="hotkey-interval" type="number" min="0" max="255" step="1" value="20"></label></div><p id="hotkey-current"></p><div class="actions"><button id="hotkey-apply">Apply HotKey</button><span id="hotkey-status" role="status" aria-live="polite"></span></div>');
+advancedPanel.insertAdjacentHTML('beforeend','<hr><h2>HotKey</h2><p>Repeat one standard key at a controlled interval. The source must be in Standard mode.</p><div class="modify-hotkey-row"><label class="hotkey-toggle"><span>HotKey</span><input id="hotkey-toggle" type="checkbox"></label><span class="hotkey-interval">Interval <output id="hotkey-interval-value">23</output></span></div><div style="display:none"><select id="hotkey-source"></select></div><p id="hotkey-current"></p><div class="actions"><button id="hotkey-apply">Apply HotKey</button><span id="hotkey-status" role="status" aria-live="polite"></span></div>');
 hePanel.after(advancedPanel);
 const pendingPanel=document.createElement('section');pendingPanel.className='panel';pendingPanel.hidden=true;
 pendingPanel.innerHTML='<small>IN DEVELOPMENT</small><h2 id="pending-title"></h2><p>This section is in development. Device controls will appear here when ready.</p>';
@@ -47,11 +47,11 @@ const lightingPanel=document.createElement('section');lightingPanel.className='p
 lightingPanel.innerHTML='<small>LIGHTING</small><h2>Lighting control</h2><div class="lighting-section lighting-global"><h3>Back Light brightness</h3><label class="range-control"><input id="lighting-brightness" type="range" min="0" max="100" step="1" disabled><output id="lighting-brightness-value">—</output></label><div class="actions"><button id="lighting-read">Refresh</button><button id="lighting-apply" disabled>Apply</button></div><p id="lighting-status" role="status" aria-live="polite">Read Back Light brightness from the keyboard.</p></div>';
 pendingPanel.after(lightingPanel);
 lightingPanel.insertAdjacentHTML('afterbegin','<div class="lighting-service-controls" hidden aria-hidden="true"><input id="backlight-enabled" type="checkbox" disabled><button id="backlight-enabled-apply" disabled>Apply Back Light power</button></div>');
-lightingPanel.insertAdjacentHTML('beforeend','<hr><h3>Back Light effect</h3><p id="lighting-mode-current">Read the current effect from the keyboard.</p><div class="controls"><label>Effect<select id="lighting-mode" disabled><option value="1">EQ (system audio)</option><option value="2">Normal</option><option value="5">Stream</option><option value="4">Gradient</option><option value="6">Star</option><option value="7">Roll</option><option value="3">Breath</option></select></label></div><button id="lighting-mode-apply" disabled>Apply effect</button><p id="lighting-mode-status" role="status">EQ reacts to system audio while the application runs, including in the tray. Under Light and Single Light remain independent layers.</p>');
+lightingPanel.insertAdjacentHTML('beforeend','<hr><h3>Back Light effect</h3><div class="controls"><label>Effect<select id="lighting-mode" disabled><option value="1">EQ (system audio)</option><option value="2">Normal</option><option value="5">Stream</option><option value="4">Gradient</option><option value="6">Star</option><option value="7">Roll</option><option value="3">Breath</option></select></label></div><button id="lighting-mode-apply" disabled>Apply effect</button><p id="lighting-mode-status" role="status">EQ reacts to system audio while the application runs, including in the tray. Under Light and Single Light remain independent layers.</p>');
 lightingPanel.insertAdjacentHTML('beforeend','<div id="lighting-color-controls"><h3>Current effect color</h3><div class="controls"><label class="toggle-row"><input id="lighting-custom-rgb" type="checkbox" disabled><span>Custom RGB</span></label><label class="color-field">Color<input id="lighting-color" type="color" disabled></label></div><button id="lighting-color-apply" disabled>Apply color</button><p id="lighting-color-note">Apply an effect before editing its color. Single Light can override this color on assigned keys.</p></div>');
 lightingPanel.insertAdjacentHTML('beforeend','<div class="lighting-section"><h3>Effect speed</h3><label class="range-control"><input id="lighting-speed" type="range" min="0" max="6000" step="1" disabled><output id="lighting-speed-value">—</output></label><button id="lighting-speed-apply" disabled>Apply speed</button><p id="lighting-speed-note">Apply an effect to edit its speed. Normal has no speed control.</p></div>');
 lightingPanel.insertAdjacentHTML('beforeend','<div class="direction-control"><h3>Effect direction</h3><label class="toggle-row"><input id="lighting-reverse" type="checkbox" disabled><span>Reverse</span></label><button id="lighting-direction-apply" disabled>Apply direction</button></div>');
-lightingPanel.insertAdjacentHTML('beforeend','<hr><h2>Under Light</h2><p>Independent lighting beneath the keyboard.</p><p id="underlight-current">Read the current effect from the keyboard.</p><div class="controls"><label>Effect<select id="underlight-mode" disabled><option value="5">Stream</option><option value="3">Breath</option><option value="6">Star</option><option value="4">Gradient</option><option value="7">Normal</option></select></label></div><div class="actions"><button id="underlight-read">Refresh Under Light</button><button id="underlight-apply" disabled>Apply Under Light</button></div><p id="underlight-status" role="status">Refresh to read Normal Sync status.</p>');
+lightingPanel.insertAdjacentHTML('beforeend','<hr><h2>Under Light</h2><p>Independent lighting beneath the keyboard.</p><div class="controls"><label>Effect<select id="underlight-mode" disabled><option value="5">Stream</option><option value="3">Breath</option><option value="6">Star</option><option value="4">Gradient</option><option value="7">Normal</option></select></label></div><div class="actions"><button id="underlight-read">Refresh Under Light</button><button id="underlight-apply" disabled>Apply Under Light</button></div><p id="underlight-status" role="status">Refresh to read Normal Sync status.</p>');
 lightingPanel.insertAdjacentHTML('beforeend','<h3>Under Light color</h3><div class="controls"><label class="toggle-row"><input id="underlight-custom-rgb" type="checkbox" disabled><span>Custom RGB</span></label><label class="color-field">Color<input id="underlight-color" type="color" disabled></label></div><button id="underlight-color-apply" disabled>Apply Under Light color</button><p>Color is available for Normal and Breath. Apply the effect before editing its color.</p>');
 lightingPanel.insertAdjacentHTML('beforeend','<div class="lighting-section"><h3>Under Light speed</h3><label class="range-control"><input id="underlight-speed" type="range" min="0" max="6000" step="1" disabled><output id="underlight-speed-value">—</output></label><button id="underlight-speed-apply" disabled>Apply Under Light speed</button><p id="underlight-speed-note">Apply an effect before editing its speed.</p></div>');
 lightingPanel.insertAdjacentHTML('beforeend','<div class="lighting-section"><h3>Under Light brightness</h3><label class="range-control"><input id="underlight-brightness" type="range" min="0" max="100" step="1" disabled><output id="underlight-brightness-value">—</output></label><button id="underlight-brightness-apply" disabled>Apply Under Light brightness</button></div>');
@@ -187,12 +187,11 @@ async function readUnderLight(){
  $('underlight-brightness').value=Math.round(underLightState.brightness*100/255);updateLightingSlider('underlight-brightness','underlight-brightness-value');
  $('underlight-enabled').checked=underLightState.enabled;
  $('underlight-sync').checked=underLightState.sync===1;
- $('underlight-sync-note').textContent=underLightState.sync===0?'Normal Sync is off. Independent effects are available.':'Disable Normal Sync to edit independent Under Light effects.';
- $('underlight-current').textContent=`Current effect: ${underLightState.name}`;
+ $('underlight-sync-note').textContent=underLightState.sync===0?'':'Disable Normal Sync to edit independent Under Light effects.';
  $('underlight-mode').value=underLightReady?String(underLightState.mode):'';
  $('underlight-custom-rgb').checked=!!underLightState.customRgb;$('underlight-color').value=underLightState.color||'#000000';
  $('underlight-speed').min=0;$('underlight-speed').max=100;$('underlight-speed').value=underLightState.canEditSpeed?speedToPercent(underLightState.speed,underLightState.speedMinimum,underLightState.speedMaximum):'';updateLightingSlider('underlight-speed','underlight-speed-value');
- $('underlight-speed-note').textContent=underLightState.canEditSpeed?'0 to 100% of the effect speed range.':'This effect has no speed control.';
+ $('underlight-speed-note').textContent=underLightState.canEditSpeed?'':'This effect has no speed control.';
  $('underlight-speed').closest('.lighting-section')?.classList.toggle('no-speed',!underLightState.canEditSpeed);
  $('underlight-status').textContent=underLightReady?'Effect read from keyboard. Refresh to read Normal Sync status.':'This saved Under Light effect is not supported yet.';
 }
@@ -232,25 +231,25 @@ $('lighting-color-apply').onclick=async()=>{
  finally{setBusy(false);}
 };
 async function readLightingMode(){
- if(eqLighting.isActive()){lightingModeReady=true;$("lighting-mode").value="1";$("lighting-mode-current").textContent="Current effect: EQ (system audio)";return;}
+ if(eqLighting.isActive()){lightingModeReady=true;$("lighting-mode").value="1";return;}
  lightingModeReady=false;
  const reply=await window.keyboard.readBackLight();if(!reply.ok)throw Error(reply.error);
- const state=reply.result;lightingState=state;$('backlight-enabled').checked=state.enabled;$('lighting-mode-current').textContent=`Current effect: ${state.name}`;
+ const state=reply.result;lightingState=state;$('backlight-enabled').checked=state.enabled;
  $('lighting-speed').value=state.speed??'';updateLightingSlider('lighting-speed','lighting-speed-value');
  $('lighting-reverse').checked=!!state.reverse;
  $('lighting-speed').min=state.speedMinimum??0;$('lighting-speed').max=state.speedMaximum??0;updateLightingSlider('lighting-speed','lighting-speed-value');
- $('lighting-speed-note').textContent=state.canEditSpeed?`${state.name} speed: ${state.speedMinimum} to ${state.speedMaximum}, matching MMPanel.`:'This effect has no speed control.';
+ $('lighting-speed-note').textContent=state.canEditSpeed?'':'This effect has no speed control.';
  $('lighting-speed').closest('.lighting-section')?.classList.toggle('no-speed',!state.canEditSpeed);
  $('lighting-custom-rgb').checked=!!state.customRgb;$('lighting-color').value=state.color||'#000000';
  $('lighting-color-note').textContent=state.mode===6?'Star uses the selected color directly. Single Light can override Back Light on assigned keys.':state.canEditColor?'Custom RGB overrides the effect palette. Apply an effect before editing its color. Single Light can override Back Light on assigned keys.':'This effect has no custom color control.';
  lightingModeReady=state.canSwitch;$('lighting-mode').value=state.canSwitch?String(state.mode):'';
- $('lighting-mode-status').textContent=state.canSwitch?'Normal, Stream, Gradient, Star, Roll and Breath are available. EQ reacts to system audio while the application runs, including in the tray.':'Switching from this effect is in development; select a supported Back Light effect in MMPanel first.';
+ $('lighting-mode-status').textContent=state.canSwitch?'':'Switching from this effect is in development; select a supported Back Light effect in MMPanel first.';
 }
 $('lighting-mode-apply').onclick=async()=>{
  if(busy||!lightingModeReady)return;
  const mode=Number($('lighting-mode').value);setBusy(true);
  $('lighting-mode-status').textContent='Applying effect and verifying device settings...';
- try{if(mode===1){await eqLighting.start();lightingModeReady=true;$('lighting-mode-current').textContent='Current effect: EQ (system audio)';$('lighting-mode-status').textContent='EQ is running. Closing the window keeps it running in the tray. Select and apply another effect to stop.';return;}await eqLighting.stop(true);const reply=await window.keyboard.setBackLightMode(mode);if(!reply.ok)throw Error(reply.error);await readLightingMode();$('lighting-mode-status').textContent='Effect applied; configuration readback verified. Saved to device memory automatically.';}
+ try{if(mode===1){await eqLighting.start();lightingModeReady=true;$('lighting-mode-status').textContent='EQ is running. Closing the window keeps it running in the tray. Select and apply another effect to stop.';return;}await eqLighting.stop(true);const reply=await window.keyboard.setBackLightMode(mode);if(!reply.ok)throw Error(reply.error);await readLightingMode();$('lighting-mode-status').textContent='Effect applied; configuration readback verified. Saved to device memory automatically.';}
  catch(error){lightingModeReady=true;$('lighting-mode-status').textContent=error.message;}
  finally{setBusy(false);}
 };
@@ -261,7 +260,7 @@ async function lightingBrightness(apply=false){
  if(apply&&(!Number.isInteger(percent)||percent<0||percent>100)){$('lighting-status').textContent='Choose a brightness from 0 to 100%.';return;}
  setBusy(true);$('lighting-apply').disabled=true;$('lighting-read').disabled=true;$('lighting-brightness').disabled=true;
  let success=false;
- try{const reply=apply?await window.keyboard.setBrightness(value):await window.keyboard.readBrightness();if(!reply.ok)throw Error(reply.error);lightingSavedBrightness=reply.result.brightness;$('lighting-brightness').value=Math.round(lightingSavedBrightness*100/255);updateLightingSlider('lighting-brightness','lighting-brightness-value');success=true;$('lighting-status').textContent=apply?'Brightness applied; device readback verified.':'Brightness read from keyboard.';try{await readLightingMode();}catch(error){$('lighting-mode-status').textContent=error.message;}try{await readUnderLight();}catch(error){$('underlight-status').textContent=error.message;}try{await readSingleLight();}catch(error){$('single-status').textContent=error.message;}}
+ try{const reply=apply?await window.keyboard.setBrightness(value):await window.keyboard.readBrightness();if(!reply.ok)throw Error(reply.error);lightingSavedBrightness=reply.result.brightness;$('lighting-brightness').value=Math.round(lightingSavedBrightness*100/255);updateLightingSlider('lighting-brightness','lighting-brightness-value');success=true;$('lighting-status').textContent=apply?'Brightness applied; device readback verified.':'';try{await readLightingMode();}catch(error){$('lighting-mode-status').textContent=error.message;}try{await readUnderLight();}catch(error){$('underlight-status').textContent=error.message;}try{await readSingleLight();}catch(error){$('single-status').textContent=error.message;}}
  catch(error){$('lighting-status').textContent=error.message;}
  finally{lightingBrightnessReady=success;setBusy(false);$('lighting-read').disabled=false;}
 }
@@ -272,8 +271,32 @@ remapPanel.innerHTML='<small>PROGRAMMING</small><h2>Remap</h2><p>Assign one phys
 pendingPanel.after(remapPanel);
 remapPanel.insertAdjacentHTML('beforeend','<hr><h2>Modify</h2><p>Configure keyboard or mouse modifier fields for one standard switch.</p><div class="controls"><label>Source switch<select id="modify-source"></select></label><label>Type<select id="modify-type"><option value="0">Keyboard</option><option value="1">Mouse</option></select></label><label>Target key<select id="modify-target"></select></label><label>Button<input id="modify-button" type="number" min="0" max="255" value="0"></label><label>X<input id="modify-x" type="number" min="-32768" max="32767" value="0"></label><label>Y<input id="modify-y" type="number" min="-32768" max="32767" value="0"></label><label>Wheel<input id="modify-wheel" type="number" min="-128" max="127" value="0"></label><label>Mode<input id="modify-mode" type="number" min="0" max="255" value="0"></label><label>Interval<input id="modify-interval" type="number" min="0" max="65535" value="0"></label></div><p id="modify-current"></p><div class="actions"><button id="modify-apply">Apply Modify</button><span id="modify-status" role="status" aria-live="polite"></span></div>');
 function fillHotKey(){if(!programming||!profile)return;const select=$('hotkey-source'),previous=select.value||selectedId;select.replaceChildren();for(const key of profile.layout){const option=document.createElement('option');option.value=key.id;option.textContent=`${key.label||'Space'} (${key.row+1}:${key.col+1})`;select.appendChild(option);}select.value=previous;updateHotKey();}
-function updateHotKey(){if(!programming)return;const [row,col]=$('hotkey-source').value.split(':').map(Number),key=programming.keys.find(k=>k.row===row&&k.col===col);if(!key)return;$('hotkey-interval').value=key.hotKey?.interval??0;$('hotkey-current').textContent=`Current mode: ${key.mode===0?'Standard':`Mode ${key.mode}`}. HotKey type: ${key.hotKey?.type??0}, interval: ${key.hotKey?.interval??0}.`;$('hotkey-apply').disabled=busy||key.mode!==0;}
-$('hotkey-source').onchange=updateHotKey;$('hotkey-apply').onclick=async()=>{if(busy||!programming)return;setBusy(true);$('hotkey-status').textContent='Applying and verifying HotKey...';try{const reply=await window.keyboard.setHotKey({layer,id:$('hotkey-source').value,interval:$('hotkey-interval').valueAsNumber});if(!reply.ok)throw new Error(reply.error);programming=reply.result;fillHotKey();$('hotkey-status').textContent='HotKey applied and verified by readback.';}catch(e){$('hotkey-status').textContent=e.message;}finally{setBusy(false);updateHotKey();}};
+function updateHotKey(){
+ if(!programming){$('hotkey-toggle').disabled=true;return;}
+ const source=$('hotkey-source').value;if(!source){$('hotkey-toggle').checked=false;$('hotkey-toggle').disabled=true;return;}
+ const [row,col]=source.split(':').map(Number),key=programming.keys.find(k=>k.row===row&&k.col===col);if(!key){$('hotkey-toggle').checked=false;$('hotkey-toggle').disabled=true;return;}
+ $('hotkey-toggle').checked=key.hotKey?.type===2;$('hotkey-toggle').disabled=busy||key.mode!==0;$('hotkey-interval-value').textContent='23';
+ $('hotkey-current').textContent=`Current mode: ${key.mode===0?'Standard':`Mode ${key.mode}`}. HotKey: ${key.hotKey?.type===2?'enabled':'disabled'}.`;
+ $('hotkey-apply').disabled=busy||key.mode!==0;
+}
+$('hotkey-source').onchange=updateHotKey;
+$('hotkey-apply').onclick=async()=>{
+ if(busy||!programming)return;
+ const id=$('hotkey-source').value,want=$('hotkey-toggle').checked,key=programming.keys.find(k=>`${k.row}:${k.col}`===id);
+ if(!id||!key){$('hotkey-status').textContent='Select a switch first.';return;}
+ if(key.mode!==0){$('hotkey-toggle').checked=key.hotKey?.type===2;$('hotkey-status').textContent='HotKey is available for Standard switches only.';return;}
+ setBusy(true);$('hotkey-status').textContent=want?'Applying HotKey...':'Removing HotKey...';
+ try{
+  const reply=want?await window.keyboard.setHotKey({layer,id,interval:23}):await window.keyboard.setModify({layer,id,modify:{type:0,row:key.row,col:key.col,button:0,x:0,y:0,wheel:0,mode:0,interval:0}});
+  if(!reply.ok)throw new Error(reply.error);
+  programming=reply.result;fillHotKey();
+  const applied=reply.result.keys.find(k=>`${k.row}:${k.col}`===id);
+  if(want&&applied?.modify?.mode!==2)throw new Error(`HotKey was not applied by the keyboard (readback mode ${applied?.modify?.mode??'unknown'}).`);
+  if(!want&&applied?.modify?.mode===2)throw new Error('HotKey was not removed by the keyboard.');
+  $('hotkey-status').textContent=want?'HotKey applied and verified by readback.':'HotKey removed and verified by readback.';
+ }catch(e){$('hotkey-status').textContent=e.message;}
+ finally{setBusy(false);updateHotKey();}
+};
 function fillRemap(){if(!profile)return;const opts=profile.layout.map(k=>`<option value="${k.id}">${k.label||k.id}</option>`).join('');$('remap-source').innerHTML=opts;$('remap-target').innerHTML=opts;$('remap-source').value=selectedId;updateRemapState();}
 remapPanel.insertAdjacentHTML('beforeend','<hr><h2>Off / Enable key</h2><p>Off disables the source switch selected above. Available for Standard, Media, FN, DKS, Snap Tap and SOCD assignments. The saved assignment is retained.</p><label><input id="key-enabled" type="checkbox"> Enable selected key</label><button id="key-enabled-apply">Apply key state</button><p id="key-enabled-status" role="status"></p>');
 $('key-enabled-apply').onclick=async()=>{
@@ -627,7 +650,7 @@ function programmingBadge(assignment){
  const labelFor=id=>profile?.layout.find(k=>k.id===id)?.label||id;
  if(assignment.mode===5)return {text:'SNAP',kind:'snap'};
  if(assignment.mode===6)return {text:'SOCD',kind:'snap'};
- if(assignment.mode===4)return {text:assignment.dks?.type===1?'DKS-MOUSE':'DKS',kind:'dks'};
+ if(assignment.mode===4){const d=assignment.dks||{};if(d.type===1)return {text:'DKS-MOUSE',kind:'dks'};const target=d.row>0?profile?.layout.find(k=>k.row===d.row-1&&k.col===d.col):null;return {text:target?`DKS->${target.label||target.id}`:'DKS',kind:'dks'};}
  if(assignment.mode===3)return {text:[0,1,2].includes(assignment.layer?.layer)?`FN${assignment.layer.layer+1}`:'FN',kind:'fn'};
  if(assignment.mode===2)return {text:'MEDIA',kind:'media'};
  if(assignment.mode===0&&assignment.modify?.type===0&&assignment.modify.row>=1&&(assignment.modify.row!==assignment.row+1||assignment.modify.col!==assignment.col)){
@@ -636,12 +659,14 @@ function programmingBadge(assignment){
  return null;
 }
 function updateProgrammingIndicators(){
- const disabled=[];
+ const disabled=[],dksTargets=new Set();
+ if(programming)for(const item of programming.keys){if(item.mode===4&&item.dks?.type===0&&item.dks.row>0)dksTargets.add(`${item.dks.row-1}:${item.dks.col}`);}
  for(const button of $('keyboard').querySelectorAll('.key')){
   const assignment=programming?.keys.find(k=>k.row+':'+k.col===button.dataset.id);
   const off=assignment?.locked===1;button.classList.toggle('key-off',off);
   const badge=programmingBadge(assignment);
   if(badge){button.dataset.assignment=badge.text;button.dataset.assignmentKind=badge.kind;}else{delete button.dataset.assignment;delete button.dataset.assignmentKind;}
+  button.classList.toggle('key-dks-target',dksTargets.has(button.dataset.id));
   if(!profile){const unavailable=button.querySelector('.key-label').textContent+', device state unavailable';button.title=unavailable;button.setAttribute('aria-label',unavailable);}
   if(off)disabled.push(button.querySelector('.key-label').textContent);
  }
@@ -693,8 +718,9 @@ async function loadProfile(nextLayer=layer) {
     $('preset-status').textContent='';
     programming=null;
     drawKeyboard();showSelected();
-    for(const [id,fallback] of [['pair-first','2:1'],['pair-second','2:3'],['dks-source','2:1'],['dks-target','2:3']]){
-      const select=$(id),previous=select.value||fallback;select.replaceChildren();
+    for(const id of ['pair-first','pair-second','dks-source','dks-target']){
+      const select=$(id),previous=select.value;select.replaceChildren();
+      const assign=document.createElement('option');assign.value='';assign.textContent='Assign';select.appendChild(assign);
       for(const key of profile.layout){const option=document.createElement('option');option.value=key.id;option.textContent=`${key.label || 'Space'} (${key.row + 1}:${key.col + 1})`;select.appendChild(option);}
       if(id==='dks-target')for(const [action,label] of [['left-button','Left mouse button'],['right-button','Right mouse button'],['middle-button','Middle mouse button'],['wheel-up','Scroll up'],['wheel-down','Scroll down'],['up','Move mouse up'],['down','Move mouse down'],['left','Move mouse left'],['right','Move mouse right']]){
         const option=document.createElement('option');option.value=`mouse:${action}`;option.textContent=label;select.appendChild(option);
@@ -760,22 +786,26 @@ function showPairState(){
   const names={0:'Standard',2:'Media',3:'FN/layer',4:'DKS',5:'Snap Tap',6:'SOCD / AD Cancel'};
   $('pair-current').textContent=['pair-first','pair-second'].map(id=>{
     const physical=profile.layout.find(k=>k.id===$(id).value);
-    if(!physical)return 'Select a switch';
+    if(!physical)return 'Assign';
     const key=programming.keys.find(k=>k.row===physical.row&&k.col===physical.col);
     return key?`${physical.label}: ${names[key.mode]||'Other mode'}${key.locked?' (key disabled)':''}`:`${physical.label}: Unreadable`;
   }).join(' · ');
 }
 function showDksState(){
-  const [row,col]=$('dks-source').value.split(':').map(Number),key=programming?.keys.find(k=>k.row===row&&k.col===col);
+  const source=$('dks-source').value;
+  if(!source){$('dks-target').value='';$('dks-status').textContent='Choose a source key and a DKS target.';if(typeof syncProgrammingSlots==='function')syncProgrammingSlots();return;}
+  const [row,col]=source.split(':').map(Number),key=programming?.keys.find(k=>k.row===row&&k.col===col);
   if(!key)return;
   if(key.dks.type===0&&key.dks.row>0)$('dks-target').value=`${key.dks.row-1}:${key.dks.col}`;
   if(key.dks.type===1)$('dks-target').value=key.dks.mouseAction?`mouse:${key.dks.mouseAction}`:'';
   $('dks-interval').value=key.mode===4?key.dks.interval:(key.dks.interval>=10&&key.dks.interval<=100?key.dks.interval:20);
   $('dks-status').textContent=key.mode===4?(key.locked?'DKS assigned; key disabled.':'DKS enabled.'):`DKS disabled (assignment mode ${key.mode}).`;
+  if(typeof syncProgrammingSlots==='function')syncProgrammingSlots();
 }
 $('dks-source').onchange=showDksState;
 async function applyDks(enabled){
   if(busy||!programming)return;
+  if(!$('dks-source').value||(enabled&&!$('dks-target').value)){$('dks-status').textContent='Choose a source key and a DKS target.';return;}
   if(enabled&&!$('dks-interval').reportValidity())return;
   setBusy(true);$('dks-status').textContent='Applying and verifying DKS...';
   try{
@@ -829,6 +859,8 @@ $('dks-apply').onclick=()=>applyDks(true);$('dks-disable').onclick=()=>applyDks(
 $('pair-first').onchange=showPairState;$('pair-second').onchange=showPairState;
 async function applyPair(disable=false){
   if(busy||!programming)return;
+  const first=$('pair-first').value,second=$('pair-second').value;
+  if(!first||!second||first===second){$('pair-status').textContent='Choose two different switches.';return;}
   setBusy(true);$('pair-status').textContent='Applying pair and verifying device readback...';
   try{
     const reply=await window.keyboard.setPair({layer,first:$('pair-first').value,second:$('pair-second').value,mode:disable?0:Number($('pair-mode').value)});
@@ -920,7 +952,7 @@ async function deviceSettingsAction(apply=false){
  try{
   const reply=await (action?action.apply():apply==='mode'?window.keyboard.setPerformanceMode(mode):apply?window.keyboard.setFpsEnhance(enabled):window.keyboard.readDeviceSettings());
   if(!reply.ok)throw Error(reply.error);deviceSettings=apply?{...deviceSettings,...reply.result}:reply.result;showDeviceSettings();reloadAfterRestart=apply==='mode'&&!!reply.result.reconnectPending;
-   $('device-settings-status').textContent=apply?(reloadAfterRestart?'Performance mode applied. Reloading after keyboard restart...':(action?.label||'FPS Enhance')+' applied. Device readback and preservation of other sections verified.'):'Device settings read from keyboard.';
+   $('device-settings-status').textContent=apply?(reloadAfterRestart?'Performance mode applied. Reloading after keyboard restart...':(action?.label||'FPS Enhance')+' applied. Device readback and preservation of other sections verified.'):'';
  }catch(error){deviceSettings=null;showDeviceSettings();$('device-settings-status').textContent=error.message;}
  finally{setBusy(false);}
  if(reloadAfterRestart){setTimeout(()=>window.location.reload(),900);return;}
@@ -1010,7 +1042,12 @@ $('single-brightness').addEventListener('change',autoApply(()=>$('single-brightn
 $('remap-target').addEventListener('change',autoApply(()=>$('remap-apply').click(),80));
 $('layer-target').addEventListener('change',autoApply(()=>$('layer-apply').click(),80));
 $('media-action').addEventListener('change',autoApply(()=>$('media-apply').click(),80));
-$('hotkey-interval').addEventListener('change',autoApply(()=>$('hotkey-apply').click(),250));
+const applyHotKeySoon=autoApply(()=>$('hotkey-apply').click(),80);
+$('hotkey-toggle').addEventListener('change',()=>{
+ const id=$('hotkey-source').value,key=programming?.keys.find(k=>`${k.row}:${k.col}`===id);
+ if(busy||!key||key.mode!==0){$('hotkey-toggle').checked=key?.hotKey?.type===2;$('hotkey-status').textContent=key?'HotKey is available for Standard switches only.':'Select a switch first.';return;}
+ $('hotkey-status').textContent=$('hotkey-toggle').checked?'Applying HotKey...':'Removing HotKey...';applyHotKeySoon();
+});
 $('dks-target').addEventListener('change',autoApply(()=>$('dks-apply').click(),80));
 $('dks-interval').addEventListener('change',autoApply(()=>$('dks-apply').click(),250));
 for(const id of ['modify-type','modify-button','modify-x','modify-y','modify-wheel','modify-mode','modify-interval'])$(id).addEventListener('change',autoApply(()=>$('modify-apply').click(),250));

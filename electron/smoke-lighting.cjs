@@ -10,15 +10,15 @@ app.on('browser-window-created',(_event,win)=>{
    await ready();
    await evaluate("document.querySelectorAll('aside .nav')[5].click();void 0");await ready();
    const state=await evaluate("({value:document.getElementById('lighting-brightness').valueAsNumber,status:document.getElementById('lighting-status').textContent,visible:!document.getElementById('lighting-read').closest('section').hidden,enabled:!document.getElementById('lighting-apply').disabled})");
-   assert.equal(state.visible,true);assert.equal(state.enabled,true);assert.match(state.status,/read from keyboard/);assert.ok(Number.isInteger(state.value)&&state.value>=0&&state.value<=255);
+   assert.equal(state.visible,true);assert.equal(state.enabled,true);assert.equal(state.status,'');assert.ok(Number.isInteger(state.value)&&state.value>=0&&state.value<=255);
    const backPower=await evaluate("({checked:document.getElementById('backlight-enabled').checked,enabled:!document.getElementById('backlight-enabled-apply').disabled})");
    assert.equal(backPower.enabled,true);
    await evaluate("document.getElementById('backlight-enabled').checked=!document.getElementById('backlight-enabled').checked;void 0");
-   const mode=await evaluate("({current:document.getElementById('lighting-mode-current').textContent,value:document.getElementById('lighting-mode').value,enabled:!document.getElementById('lighting-mode-apply').disabled})");
-   assert.match(mode.current,/Current effect:/);assert.equal(mode.enabled,true);assert.ok(['2','3','4','5','6','7'].includes(mode.value));
+   const mode=await evaluate("({value:document.getElementById('lighting-mode').value,enabled:!document.getElementById('lighting-mode-apply').disabled})");
+   assert.equal(mode.enabled,true);assert.ok(['2','3','4','5','6','7'].includes(mode.value));
    assert.deepEqual(await evaluate("Array.from(document.getElementById('lighting-mode').options,o=>o.textContent)"),['EQ (system audio)','Normal','Stream','Gradient','Star','Roll','Breath']);
-   const under=await evaluate("({mode:document.getElementById('underlight-mode').value,enabled:!document.getElementById('underlight-apply').disabled,current:document.getElementById('underlight-current').textContent})");
-   assert.equal(under.enabled,true);assert.match(under.current,/Current effect:/);
+   const under=await evaluate("({mode:document.getElementById('underlight-mode').value,enabled:!document.getElementById('underlight-apply').disabled})");
+   assert.equal(under.enabled,true);
    const single=await evaluate("({count:document.getElementById('single-keys').options.length,ready:!document.getElementById('single-active-apply').disabled,color:document.getElementById('single-color').value,enabled:document.getElementById('single-enabled').checked})");
    assert.equal(single.count,64);assert.equal(single.ready,true);
    for(const api of ['setBackLightEnabled','setUnderLightEnabled','setUnderLightSync','setSingleLight']){const reply=await evaluate(`window.keyboard.${api}(null)`);assert.equal(reply.ok,false);assert.ok(reply.error);}

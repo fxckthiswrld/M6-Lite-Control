@@ -134,6 +134,7 @@ body[data-page=programming] .key[data-assignment-kind=snap]:after{background:#2a
 body[data-page=programming] .key[data-assignment-kind=remap]:after{background:#0b3550;border-color:#1d6f9c;color:#8fd3ff}
 body[data-page=programming] .key[data-assignment-kind=fn]:after,body[data-page=programming] .key[data-assignment-kind=media]:after{background:#2a2a33;border-color:#52525b;color:#d4d4d8}
 
+.programming-group-note{margin:0 0 12px;color:#a1a1aa;font-size:13px;line-height:1.5}
 .programming-slot-grid{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0}
 .programming-slot{flex:0 0 160px;width:160px;min-height:78px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px 12px;border:1px dashed #52525b;border-radius:12px;background:#191a1d;color:#a1a1aa;cursor:pointer;font:inherit;box-shadow:none}
 .programming-slot span{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#71717a}
@@ -147,6 +148,17 @@ body[data-page=programming] .key[data-assignment-kind=fn]:after,body[data-page=p
 .programming-mode-row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 14px}
 .programming-mode-row button{background:#27272a!important;color:#d4d4d8!important;border-radius:10px!important;padding:8px 14px!important}
 .programming-mode-row button[aria-pressed=true]{background:#008cff!important;color:#fff!important;box-shadow:0 0 0 2px #45b5ff}
+.modify-hotkey-row{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin:0 20px;color:#d4d4d8}
+.hotkey-toggle{display:inline-flex;align-items:center;gap:10px;color:#d4d4d8;cursor:pointer}
+.hotkey-toggle input[type=checkbox]{appearance:none!important;-webkit-appearance:none!important;width:42px!important;height:24px!important;min-width:42px!important;margin:0!important;padding:0!important;border:1px solid #52525b!important;border-radius:999px!important;background:#3f3f46!important;position:relative;cursor:pointer;transition:background .16s ease,border-color .16s ease}
+.hotkey-toggle input[type=checkbox]::before{content:"";position:absolute;width:18px;height:18px;left:2px;top:2px;border-radius:50%;background:#e4e4e7;transition:transform .16s ease,background .16s ease}
+.hotkey-toggle input[type=checkbox]:checked{background:#008cff!important;border-color:#3b9dff!important}
+.hotkey-toggle input[type=checkbox]:checked::before{transform:translateX(18px);background:#fff}
+.hotkey-toggle input[type=checkbox]:disabled{opacity:.5;cursor:default}
+.hotkey-toggle input[type=checkbox]:focus-visible{outline:2px solid #008cff;outline-offset:2px}
+.hotkey-interval{display:flex;align-items:center;gap:10px;color:#d4d4d8}
+#hotkey-interval-value{min-width:30px;color:#8fd3ff;font-size:12px}
+body[data-page=programming] .key.key-dks-target,body[data-page=range] .key.key-dks-target{outline:2px solid #5ee9a8;outline-offset:-2px}
 
 .programming-overview{display:flex;flex-direction:column;gap:16px;margin-bottom:6px}
 .programming-group-bar{display:flex;gap:4px;padding:4px;background:#27272a;border-radius:999px;margin:18px 0;width:fit-content}
@@ -155,11 +167,8 @@ body[data-page=programming] .key[data-assignment-kind=fn]:after,body[data-page=p
 .programming-group-panel[hidden]{display:none!important}
 .programming-group-panel[data-group=DKS]>.programming-card>summary,.programming-group-panel[data-group=Snap]>.programming-card>summary{display:none!important}
 
-.dks-title{margin:0 0 8px;font-size:18px;color:#f4f4f5}
-
 .programming-group-panel[data-group=DKS]>.programming-card,.programming-group-panel[data-group=Snap]>.programming-card{padding:20px}
 .programming-group-panel[data-group=DKS]>.programming-card>p,.programming-group-panel[data-group=DKS]>.programming-card>.controls,.programming-group-panel[data-group=DKS]>.programming-card>.actions,.programming-group-panel[data-group=DKS]>.programming-card>label,.programming-group-panel[data-group=DKS]>.programming-card>hr,.programming-group-panel[data-group=Snap]>.programming-card>p,.programming-group-panel[data-group=Snap]>.programming-card>.controls,.programming-group-panel[data-group=Snap]>.programming-card>.actions,.programming-group-panel[data-group=Snap]>.programming-card>label,.programming-group-panel[data-group=Snap]>.programming-card>hr{margin-left:0!important;margin-right:0!important}
-.programming-group-panel[data-group=DKS] .dks-title{margin:0 0 10px!important}
 .programming-group-panel[data-group=DKS] .programming-slot-grid{margin-top:12px}
 .programming-group-panel[data-group=DKS] .programming-card>.actions{padding-bottom:0}
 
