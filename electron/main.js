@@ -25,7 +25,12 @@ async function usbOrError(action, fallback, {exclusive=false}={}) {
 async function usbWrite(action, fallback, options) {
   return usbOrError(async () => {
     const result = await action();
-    const persistence = await heAdapter.saveToDeviceMemory();
+    // The live write is already verified by readback. A failed persistence
+    // save is reported as a warning instead of failing the whole operation:
+    // the colours are on the keyboard either way.
+    let persistence;
+    try { persistence = await heAdapter.saveToDeviceMemory(); }
+    catch (error) { persistence = { acknowledged: false, warning: error.message }; }
     return result && typeof result === 'object' && !Array.isArray(result) ? { ...result, persistence } : result;
   }, fallback, options);
 }

@@ -93,6 +93,8 @@ async function singleAction(kind,colorOverride){
    selectedIds=new Set();selectedId='';refreshSelection();
    const select=$('single-keys');for(const option of select.options)option.selected=false;select.dispatchEvent(new Event('change'));
    $('single-status').textContent=kind==='color'?`Color ${color.toUpperCase()} applied to ${lastSingleKeys.length} key(s); the Single Light layer is on.`:kind==='disable'?`Single Light turned off for ${lastSingleKeys.length} key(s).`:`Single Light applied to ${lastSingleKeys.length} key(s); device readback verified.`;
+   const saveWarning=reply.result?.persistence?.warning;
+   if(saveWarning)$('single-status').textContent+=` Saving to device memory did not confirm: ${saveWarning}`;
   }}
  catch(error){singleReady=false;$('single-status').textContent=error.message;}finally{setBusy(false);}
 }
