@@ -41,7 +41,16 @@ function applySingleLight(device,backupRoot,request){
  // records persist either way, but they stay invisible until INIT17 follows them,
  // so the configuration is re-sent around the key records even when it is unchanged.
  try{if(global)device.send(encodeConfig(desiredConfig));
-  else{device.send(encodeConfig(desiredConfig));for(const key of keys){attempted.push(key);device.send(encodeSingle(expected,key));}device.send(encodeConfig(desiredConfig));}
+  else{
+   // The firmware repaints the Single Light overlay only when a light-config
+   // packet differs from its current content (verified on hardware: identical
+   // packets are ignored, so a rewritten colour stays invisible). Cycle the
+   // layer flag off and back on around the per-key records to force the redraw.
+   const off=Buffer.from(desiredConfig);off[6]=0;
+   device.send(encodeConfig(off));
+   for(const key of keys){attempted.push(key);device.send(encodeSingle(expected,key));}
+   device.send(encodeConfig(desiredConfig));
+  }
   verify(expected,desiredConfig,'applied');}
  catch(error){try{for(const key of attempted)device.send(encodeSingle(original,key));device.send(encodeConfig(config));verify(original,config,'restored');}catch(restore){throw Error(`${error.message}; restoration unverified: ${restore.message}. Backup: ${backup}`);}throw Error(`${error.message}; original Single Light settings restored. Backup: ${backup}`);}
  return {...readSingleLight(expected,desiredConfig),verified:true,backup};
