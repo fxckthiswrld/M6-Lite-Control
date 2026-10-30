@@ -80,18 +80,19 @@ async function readSingleLight(){
  for(const k of singleState.keys){const option=document.createElement('option');option.value=k.id;option.textContent=`${k.label}: ${k.enabled?k.color:'Back Light'}${k.canEdit?'':' (unsupported mode)'}`;option.selected=ids.size?ids.has(k.id):selectedIds.has(k.id);$('single-keys').appendChild(option);}
  showSingleSelection();
 }
-async function singleAction(kind){
+async function singleAction(kind,colorOverride){
  if(busy||(kind!=='read'&&!singleReady))return;
  const keys=kind==='read'||kind==='layer'?[]:resolveSingleKeys();
  if(kind!=='read'&&kind!=='layer'&&!keys.length){$('single-status').textContent='Select one or more keys on the keyboard to change their Single Light color.';return;}
- const request=(kind==='keys'||kind==='color')?{keys,color:$('single-color').value}:kind==='enabled'?{keys,enabled:$('single-enabled').checked}:kind==='disable'?{keys,enabled:false}:kind==='layer'?{active:$('single-active').checked}:{keys,brightness:singleBrightnessRaw};
+ const color=kind==='color'?(colorOverride??$('single-color').value):'';
+ const request=(kind==='keys'||kind==='color')?{keys,color}:kind==='enabled'?{keys,enabled:$('single-enabled').checked}:kind==='disable'?{keys,enabled:false}:kind==='layer'?{active:$('single-active').checked}:{keys,brightness:singleBrightnessRaw};
  setBusy(true);
  try{if(kind!=='read'){const reply=await window.keyboard.setSingleLight(request);if(!reply.ok)throw Error(reply.error);}lastSingleKeys=keys.slice();await readSingleLight();
   if(kind!=='read'){
    // The values are on the device now; drop the selection so the next pick starts clean.
    selectedIds=new Set();selectedId='';refreshSelection();
    const select=$('single-keys');for(const option of select.options)option.selected=false;select.dispatchEvent(new Event('change'));
-   $('single-status').textContent=kind==='color'?`Color ${$('single-color').value.toUpperCase()} applied to ${lastSingleKeys.length} key(s); the Single Light layer is on.`:kind==='disable'?`Single Light turned off for ${lastSingleKeys.length} key(s).`:`Single Light applied to ${lastSingleKeys.length} key(s); device readback verified.`;
+   $('single-status').textContent=kind==='color'?`Color ${color.toUpperCase()} applied to ${lastSingleKeys.length} key(s); the Single Light layer is on.`:kind==='disable'?`Single Light turned off for ${lastSingleKeys.length} key(s).`:`Single Light applied to ${lastSingleKeys.length} key(s); device readback verified.`;
   }}
  catch(error){singleReady=false;$('single-status').textContent=error.message;}finally{setBusy(false);}
 }
@@ -1062,7 +1063,7 @@ $('underlight-speed').addEventListener('change',autoApply(()=>$('underlight-spee
 $('underlight-brightness').addEventListener('change',autoApply(()=>$('underlight-brightness-apply').click(),250));
 $('underlight-enabled').addEventListener('change',autoApply(()=>$('underlight-enabled-apply').click(),80));
 $('single-active').addEventListener('change',autoApply(()=>$('single-active-apply').click(),80));
-$('single-color').addEventListener('change',autoApply(()=>singleAction('color'),250));
+$('single-color').addEventListener('change',event=>{const picked=event.target.value;autoApply(()=>singleAction('color',picked),250);});
 $('single-enabled').addEventListener('change',autoApply(()=>singleAction('enabled'),80));
 $('single-brightness').addEventListener('change',autoApply(()=>$('single-brightness-apply').click(),250));
 $('remap-target').addEventListener('change',autoApply(()=>$('remap-apply').click(),80));
