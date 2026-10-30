@@ -1,5 +1,7 @@
 # M6 Lite Control
 
+> 🇷🇺 Русская версия: [README.ru.md](README.ru.md)
+
 Windows Electron control software for the MMStudio M6 Lite+ Hall Effect keyboard.
 
 The application provides an English Wootility-style interface for Hall Effect setup, keyboard programming, lighting and device settings. It communicates with the keyboard through its USB HID configuration interface.
