@@ -342,7 +342,7 @@ function syncProgrammingSelection(){
 }
 $('select-multiple').hidden=true;
 selectionBar.querySelector('p').textContent='Click keys to add or remove them from the selection. Drag across keys to select a group. Changes write automatically to the selected switches.';
-for(const id of ['remap-source','modify-source','media-source','layer-source','dks-source','hotkey-source','pair-first','modify-target'])$(id).closest('label').hidden=true;
+for(const id of ['remap-source','modify-source','media-source','layer-source','dks-source','hotkey-source','pair-first','modify-target']){const wrapper=$(id)?.closest('label');if(wrapper)wrapper.hidden=true;}
 $('key-enabled').closest('label')?.classList.add('toggle-row');
 // Drag paints the physical keys; single clicks retain the normal toggle behavior.
 let drag=null,suppressClick=false;
