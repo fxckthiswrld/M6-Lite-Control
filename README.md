@@ -50,7 +50,9 @@ git tag v0.10.60
 git push origin v0.10.60
 ```
 
-The repository is intended to remain private because it contains device protocol and reverse-engineering implementation details.
+## License
+
+AGPLv3 — see [LICENSE](LICENSE). The repository documents the device's USB protocol as discovered by reverse engineering.
 
 ## Device safety
 
