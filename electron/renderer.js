@@ -1058,7 +1058,7 @@ hideAutoControls([
   'read','save-memory','save','apply',
   'lighting-read','lighting-apply','lighting-mode-apply','lighting-color-apply','lighting-speed-apply','lighting-direction-apply',
   'backlight-enabled-apply','underlight-read','underlight-apply','underlight-color-apply','underlight-speed-apply','underlight-brightness-apply','underlight-enabled-apply','underlight-sync-apply',
-  'single-read','single-apply','single-active-apply','single-brightness-apply',
+  'single-read','single-active-apply','single-brightness-apply',
   'remap-apply','layer-apply','media-apply','modify-apply','hotkey-apply','dks-apply','pair-apply','key-enabled-apply',
   'device-mode-apply','device-settings-read','device-highlight-apply','device-auto-calibration-apply','device-auto-light-off-apply','device-saturation-apply',
   'calibration-read'
