@@ -1,6 +1,9 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),{randomUUID}=require('node:crypto');
 const layout=require('./keyboard-layout.json'),{encodeConfig}=require('./lighting-brightness');
+// The keyboard drops packets that arrive back-to-back: without this gap only
+// the first per-key record of a group is applied (verified on hardware).
+function waitMilliseconds(milliseconds){if(milliseconds>0)Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,milliseconds);}
 function readSingleLight(raw,config){
  if(!Buffer.isBuffer(raw)||raw.length!==840)throw Error('Expected 840-byte Single Light section');
  encodeConfig(config);
@@ -47,9 +50,9 @@ function applySingleLight(device,backupRoot,request){
    // packets are ignored, so a rewritten colour stays invisible). Cycle the
    // layer flag off and back on around the per-key records to force the redraw.
    const off=Buffer.from(desiredConfig);off[6]=0;
-   device.send(encodeConfig(off));
-   for(const key of keys){attempted.push(key);device.send(encodeSingle(expected,key));}
-   device.send(encodeConfig(desiredConfig));
+   device.send(encodeConfig(off));waitMilliseconds(25);
+   for(const key of keys){attempted.push(key);device.send(encodeSingle(expected,key));waitMilliseconds(15);}
+   device.send(encodeConfig(desiredConfig));waitMilliseconds(25);
   }
   verify(expected,desiredConfig,'applied');}
  catch(error){try{for(const key of attempted)device.send(encodeSingle(original,key));device.send(encodeConfig(config));verify(original,config,'restored');}catch(restore){throw Error(`${error.message}; restoration unverified: ${restore.message}. Backup: ${backup}`);}throw Error(`${error.message}; original Single Light settings restored. Backup: ${backup}`);}

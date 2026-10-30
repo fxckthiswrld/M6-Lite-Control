@@ -87,13 +87,14 @@ async function singleAction(kind,colorOverride){
  const color=kind==='color'?(colorOverride??$('single-color').value):'';
  const request=(kind==='keys'||kind==='color')?{keys,color}:kind==='enabled'?{keys,enabled:$('single-enabled').checked}:kind==='disable'?{keys,enabled:false}:kind==='layer'?{active:$('single-active').checked}:{keys,brightness:singleBrightnessRaw};
  setBusy(true);
- try{if(kind!=='read'){const reply=await window.keyboard.setSingleLight(request);if(!reply.ok)throw Error(reply.error);}lastSingleKeys=keys.slice();await readSingleLight();
+ let persistence=null;
+ try{if(kind!=='read'){const reply=await window.keyboard.setSingleLight(request);if(!reply.ok)throw Error(reply.error);persistence=reply.result?.persistence??null;}lastSingleKeys=keys.slice();await readSingleLight();
   if(kind!=='read'){
    // The values are on the device now; drop the selection so the next pick starts clean.
    selectedIds=new Set();selectedId='';refreshSelection();
    const select=$('single-keys');for(const option of select.options)option.selected=false;select.dispatchEvent(new Event('change'));
    $('single-status').textContent=kind==='color'?`Color ${color.toUpperCase()} applied to ${lastSingleKeys.length} key(s); the Single Light layer is on.`:kind==='disable'?`Single Light turned off for ${lastSingleKeys.length} key(s).`:`Single Light applied to ${lastSingleKeys.length} key(s); device readback verified.`;
-   const saveWarning=reply.result?.persistence?.warning;
+   const saveWarning=persistence?.warning;
    if(saveWarning)$('single-status').textContent+=` Saving to device memory did not confirm: ${saveWarning}`;
   }}
  catch(error){singleReady=false;$('single-status').textContent=error.message;}finally{setBusy(false);}
@@ -1004,7 +1005,12 @@ document.querySelectorAll('aside .nav').forEach((nav,i)=>{
     if(i===2){hePanel.hidden=true;advancedPanel.hidden=true;pendingPanel.hidden=true;remapPanel.hidden=false;fillRemap();fillLayer();fillMedia();fillModify();remapPanel.scrollIntoView({behavior:'smooth'});return;}
     if(i===3){hePanel.hidden=true;advancedPanel.hidden=false;fillHotKey();showPairState();showDksState();advancedPanel.scrollIntoView({behavior:'smooth'});return;}
     if(i===6){hePanel.hidden=true;advancedPanel.hidden=true;settingsPanel.hidden=false;deviceSettingsAction();return;}
-    if(i===5){hePanel.hidden=true;advancedPanel.hidden=true;lightingPanel.hidden=false;lightingBrightness();return;}
+    if(i===5){
+  // Route through the interface bridge so the page state (dataset.page/uiPage)
+  // actually switches — the panel alone is not enough for key selection.
+  if(window.m6UI?.navigate){window.m6UI.navigate('lighting');}
+  else{hePanel.hidden=true;advancedPanel.hidden=true;lightingPanel.hidden=false;document.body.dataset.page='lighting';lightingBrightness();}
+  return;}
     hePanel.hidden=true;advancedPanel.hidden=true;pendingPanel.hidden=false;
     $('pending-title').textContent=nav.dataset.title;
   };
