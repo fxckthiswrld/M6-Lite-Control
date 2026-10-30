@@ -1,6 +1,6 @@
 {
   "name": "m6-lite-control",
-  "version": "0.10.67",
+  "version": "0.10.68",
   "private": true,
   "main": "main.js",
   "scripts": {

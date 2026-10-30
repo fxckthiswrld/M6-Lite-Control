@@ -22,16 +22,28 @@ function applySingleLight(device,backupRoot,request){
   if(Object.hasOwn(request,'color')&&(typeof request.color!=='string'||!/^#[0-9a-f]{6}$/i.test(request.color)))throw Error('Expected #RRGGBB color');
   if(Object.hasOwn(request,'brightness')&&(!Number.isInteger(request.brightness)||request.brightness<0||request.brightness>255))throw Error('Brightness must be an integer from 0 to 255');
  }
+ // Assigning a color activates the key and the Single Light layer, otherwise the stored RGB would never be
+ // displayed (the vendor firmware only lights records whose actived byte is 1). An explicit enabled flag wins.
+ const activates=!global&&(Object.hasOwn(request,'enabled')?request.enabled===true:Object.hasOwn(request,'color'));
  const backup=path.join(backupRoot,'single-light-'+randomUUID());fs.mkdirSync(backup,{recursive:true});
  const kinds=[1,2,4,24,25,26,6,7,9,17],before=new Map();
  for(const k of kinds){const b=device.readInit(k);before.set(k,b);fs.writeFileSync(path.join(backup,`init-${k}.bin`),b,{flag:'wx'});}
  const original=before.get(7),config=before.get(17),state=readSingleLight(original,config),expected=Buffer.from(original),desiredConfig=Buffer.from(config);
  if(global){if(!state.canEnable)throw Error('Unknown Single Light enable state');desiredConfig[6]=Number(request.active);}
- else for(const key of keys){if(!state.keys.find(k=>k.id===key.id).canEdit)throw Error('Only Normal Single Light records can currently be edited safely');const o=(key.col*6+key.row)*10;if(Object.hasOwn(request,'enabled'))expected[o]=Number(request.enabled);if(Object.hasOwn(request,'brightness'))expected[o+2]=request.brightness;if(Object.hasOwn(request,'color'))Buffer.from(request.color.slice(1),'hex').copy(expected,o+3);}
+ else{
+  for(const key of keys){if(!state.keys.find(k=>k.id===key.id).canEdit)throw Error('Only Normal Single Light records can currently be edited safely');const o=(key.col*6+key.row)*10;if(Object.hasOwn(request,'enabled'))expected[o]=Number(request.enabled);else if(Object.hasOwn(request,'color'))expected[o]=1;if(Object.hasOwn(request,'brightness'))expected[o+2]=request.brightness;if(Object.hasOwn(request,'color'))Buffer.from(request.color.slice(1),'hex').copy(expected,o+3);}
+  if(activates&&state.canEnable)desiredConfig[6]=1;
+ }
  const attempted=[];
  function verify(raw,cfg,label){for(const k of kinds){const observed=device.readInit(k),target=k===7?raw:k===17?cfg:before.get(k),n=k===6?218:target.length;fs.writeFileSync(path.join(backup,`${label}-${k}.bin`),observed);if(observed.length!==target.length||!observed.subarray(0,n).equals(target.subarray(0,n)))throw Error(`Readback mismatch in INIT${k}`);}}
- try{if(global)device.send(encodeConfig(desiredConfig));else for(const key of keys){attempted.push(key);device.send(encodeSingle(expected,key));}verify(expected,desiredConfig,'applied');}
- catch(error){try{if(global)device.send(encodeConfig(config));else for(const key of attempted)device.send(encodeSingle(original,key));verify(original,config,'restored');}catch(restore){throw Error(`${error.message}; restoration unverified: ${restore.message}. Backup: ${backup}`);}throw Error(`${error.message}; original Single Light settings restored. Backup: ${backup}`);}
+ // The keyboard only redraws the Single Light overlay once it receives a light
+ // configuration packet (INIT17). Verified on hardware 2026-10-30: per-key SINGLE
+ // records persist either way, but they stay invisible until INIT17 follows them,
+ // so the configuration is re-sent around the key records even when it is unchanged.
+ try{if(global)device.send(encodeConfig(desiredConfig));
+  else{device.send(encodeConfig(desiredConfig));for(const key of keys){attempted.push(key);device.send(encodeSingle(expected,key));}device.send(encodeConfig(desiredConfig));}
+  verify(expected,desiredConfig,'applied');}
+ catch(error){try{for(const key of attempted)device.send(encodeSingle(original,key));device.send(encodeConfig(config));verify(original,config,'restored');}catch(restore){throw Error(`${error.message}; restoration unverified: ${restore.message}. Backup: ${backup}`);}throw Error(`${error.message}; original Single Light settings restored. Backup: ${backup}`);}
  return {...readSingleLight(expected,desiredConfig),verified:true,backup};
 }
 module.exports={readSingleLight,encodeSingle,applySingleLight};

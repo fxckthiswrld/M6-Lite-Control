@@ -21,6 +21,30 @@ test('Color-only and enable-only requests preserve the other per-key settings',t
  applySingleLight(device,root,{keys:['2:1'],color:'#112233'});expected.set([17,34,51],83);assert.deepEqual(sections.get(7),expected);
  applySingleLight(device,root,{keys:['2:1'],enabled:false});expected[80]=0;assert.deepEqual(sections.get(7),expected);
 });
+test('Assigning a color activates the key and enables the Single Light layer',t=>{
+ const {root,sections,device}=setup(t),o=80;
+ assert.equal(sections.get(7)[o],0);assert.equal(sections.get(17)[6],0);
+ const result=applySingleLight(device,root,{keys:['2:1'],color:'#336699'});
+ assert.equal(sections.get(7)[o],1);assert.equal(sections.get(17)[6],1);
+ assert.equal(result.enabled,true);assert.equal(result.keys.find(k=>k.id==='2:1').enabled,true);
+});
+test('Explicit disable keeps a colored key off and the layer untouched',t=>{
+ const {root,sections,device}=setup(t);
+ applySingleLight(device,root,{keys:['2:1'],enabled:false,color:'#336699'});
+ assert.equal(sections.get(7)[80],0);assert.equal(sections.get(17)[6],0);
+});
+test('Per-key records are wrapped in the light configuration so the overlay is redrawn',t=>{
+ const {root,device,writes}=setup(t);
+ applySingleLight(device,root,{keys:['2:1'],color:'#112233'});
+ // Verified on hardware: the firmware paints the Single Light overlay only when a
+ // light configuration packet follows the per-key SINGLE records.
+ assert.deepEqual(writes.map(p=>p[1]),[17,8,17]);
+});
+test('Brightness-only edits leave activation and the layer untouched',t=>{
+ const {root,sections,device}=setup(t);
+ applySingleLight(device,root,{keys:['2:1'],brightness:128});
+ assert.equal(sections.get(7)[80],0);assert.equal(sections.get(17)[6],0);
+});
 for(const fail of ['send','read'])test(`Brightness group ${fail} failure restores exact RGB, brightness and enable flags`,t=>{
  const {root,sections,device,writes}=setup(t);sections.get(7).set([1,1,57,12,34,56],80);sections.get(7).set([0,1,193,87,65,43],140);
  const before=Buffer.from(sections.get(7)),send=device.send,read=device.readInit;let failed=false;
